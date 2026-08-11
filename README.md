@@ -1,5 +1,8 @@
 <p align="center">
-  <img src="apps/web/public/brand/cursor/lockup-horizontal-2d-light.svg" alt="Cursor" width="220" />
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="apps/web/public/brand/cursor/lockup-horizontal-2d-dark.svg" />
+    <img src="apps/web/public/brand/cursor/lockup-horizontal-2d-light.svg" alt="Cursor" width="240" />
+  </picture>
 </p>
 
 <h1 align="center">Cursor Security</h1>
@@ -12,20 +15,20 @@
 <p align="center">
   <a href="https://github.com/gurkanfikretgunak/cursor-security"><img src="https://img.shields.io/badge/GitHub-cursor--security-181717?style=flat-square&logo=github&logoColor=white" alt="GitHub" /></a>
   <img src="https://img.shields.io/badge/Node.js-20%2B-339933?style=flat-square&logo=node.js&logoColor=white" alt="Node.js 20+" />
-  <img src="https://img.shields.io/badge/Next.js-16-000000?style=flat-square&logo=next.js&logoColor=white" alt="Next.js 16" />
+  <img src="https://img.shields.io/badge/Next.js-16-000000?style=flat-square&logo=nextdotjs&logoColor=white" alt="Next.js 16" />
   <img src="https://img.shields.io/badge/TypeScript-5-3178C6?style=flat-square&logo=typescript&logoColor=white" alt="TypeScript" />
-  <img src="https://img.shields.io/badge/Auth.js-v5-000000?style=flat-square&logo=auth0&logoColor=white" alt="Auth.js" />
+  <img src="https://img.shields.io/badge/Auth.js-v5-black?style=flat-square&logo=auth0&logoColor=white" alt="Auth.js" />
   <img src="https://img.shields.io/badge/Postgres-16-4169E1?style=flat-square&logo=postgresql&logoColor=white" alt="Postgres 16" />
   <img src="https://img.shields.io/badge/Drizzle-ORM-C5F74F?style=flat-square&logo=drizzle&logoColor=black" alt="Drizzle ORM" />
 </p>
 
 <p align="center">
-  <a href="https://owasp.org/www-project-application-security-verification-standard/"><img src="https://img.shields.io/badge/OWASP-ASVS%20L2-red?style=flat-square" alt="OWASP ASVS L2" /></a>
+  <a href="https://owasp.org/www-project-application-security-verification-standard/"><img src="https://img.shields.io/badge/OWASP-ASVS%20L2-red?style=flat-square&logo=owasp&logoColor=white" alt="OWASP ASVS L2" /></a>
   <a href="https://www.aicpa-cima.com/topic/audit-assurance/audit-and-assurance-greater-than-soc-2"><img src="https://img.shields.io/badge/SOC%202-mapped-1F4E79?style=flat-square" alt="SOC 2 mapped" /></a>
   <a href="https://www.iso.org/standard/27001"><img src="https://img.shields.io/badge/ISO%2027001-mapped-0055A5?style=flat-square" alt="ISO 27001 mapped" /></a>
-  <a href="https://owasp.org/www-project-top-10-for-large-language-model-applications/"><img src="https://img.shields.io/badge/OWASP-LLM%20Top%2010-orange?style=flat-square" alt="OWASP LLM Top 10" /></a>
+  <a href="https://owasp.org/www-project-top-10-for-large-language-model-applications/"><img src="https://img.shields.io/badge/OWASP-LLM%20Top%2010-orange?style=flat-square&logo=owasp&logoColor=white" alt="OWASP LLM Top 10" /></a>
   <a href="https://www.nist.gov/itl/ai-risk-management-framework"><img src="https://img.shields.io/badge/NIST-AI%20RMF-003C71?style=flat-square" alt="NIST AI RMF" /></a>
-  <a href="https://cursor.com"><img src="https://img.shields.io/badge/Developed%20with-Cursor-26251E?style=flat-square&logo=cursor&logoColor=white" alt="Developed with Cursor" /></a>
+  <a href="https://cursor.com"><img src="https://img.shields.io/badge/Developed%20with-Cursor-26251E?style=flat-square&labelColor=edecec&color=26251E" alt="Developed with Cursor" /></a>
 </p>
 
 <p align="center">
@@ -139,7 +142,10 @@ cursor-security/
 | [`apps/web/public/brand/cursor/`](./apps/web/public/brand/cursor/) | Official logos from Ambassador Studio | [Brand](#brand--naming) |
 
 <p align="center">
-  <img src="apps/web/public/brand/cursor/cube-25d.svg" alt="Cursor cube" width="56" />
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="apps/web/public/brand/cursor/cube-2d-dark.svg" />
+    <img src="apps/web/public/brand/cursor/cube-2d-light.svg" alt="Cursor cube" width="56" />
+  </picture>
 </p>
 
 ---
@@ -434,16 +440,18 @@ Template: [`apps/web/.env.example`](./apps/web/.env.example) (`.env*` is gitigno
 
 - Product name in this repo: **Cursor Security**
 - Company/product short name: **Cursor** — not “Cursor AI” or “Cursor Code” ([brand guidelines](https://cursor.com/brand))
-- Official SVGs vendored from [Ambassador Studio library](https://kamilstanuch.github.io/cursor-ambassador-studio/#/library) into [`apps/web/public/brand/cursor/`](./apps/web/public/brand/cursor/)
-- UI: cube mark in header/hero; footer **Developed with Cursor** → https://cursor.com
-- Attribution notes: [`apps/web/public/brand/cursor/README.md`](./apps/web/public/brand/cursor/README.md)
+- Official SVGs from [Ambassador Studio library](https://kamilstanuch.github.io/cursor-ambassador-studio/#/library) → [`apps/web/public/brand/cursor/`](./apps/web/public/brand/cursor/)
+- README logos use `<picture>` + `prefers-color-scheme` so **light/dark GitHub themes** both stay readable
+- Brand colors: light fg `#26251e` / dark fg `#edecec` ([brand tokens](https://github.com/kamilstanuch/cursor-ambassador-studio/blob/main/js/brandTokens.js))
+- Product UI (light page): cube mark in header/hero; footer **Developed with Cursor** → https://cursor.com
+- Full asset table: [`apps/web/public/brand/cursor/README.md`](./apps/web/public/brand/cursor/README.md)
 
-| File | Source asset |
-| --- | --- |
-| `cube-2d-light.svg` | `CUBE_2D_LIGHT.svg` |
-| `cube-25d.svg` | `CUBE_25D.svg` |
-| `wordmark-light.svg` | `WORDMARK_LIGHT.svg` |
-| `lockup-horizontal-2d-light.svg` | `LOCKUP_HORIZONTAL_2D_LIGHT.svg` |
+| File | Theme | Role |
+| --- | --- | --- |
+| `lockup-horizontal-2d-light.svg` / `…-dark.svg` | Light / Dark | Hero lockup in README |
+| `cube-2d-light.svg` / `cube-2d-dark.svg` | Light / Dark | Compact mark (README + UI light) |
+| `cube-25d.svg` | Both | Shaded cube (UI hero) |
+| `wordmark-light.svg` / `wordmark-dark.svg` | Light / Dark | Wordmark only |
 
 ---
 
@@ -538,7 +546,10 @@ Capability should grow only as fast as verification, observability, and human ac
 ---
 
 <p align="center">
-  <img src="apps/web/public/brand/cursor/cube-2d-light.svg" alt="Cursor" width="28" />
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="apps/web/public/brand/cursor/cube-2d-dark.svg" />
+    <img src="apps/web/public/brand/cursor/cube-2d-light.svg" alt="Cursor" width="32" />
+  </picture>
   <br/>
   <sub>
     Developed with <a href="https://cursor.com">Cursor</a>

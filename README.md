@@ -31,6 +31,14 @@
   <a href="https://cursor.com/brand"><strong>Cursor brand</strong></a>
 </p>
 
+<p align="center">
+  <sub>
+    Author
+    <a href="https://github.com/gurkanfikretgunak"><strong>Gürkan Fikret Günak</strong></a>
+    · Cursor Ambassador
+  </sub>
+</p>
+
 ---
 
 ## Why
@@ -133,5 +141,9 @@ Refer to the product as **Cursor** — not “Cursor AI” or “Cursor Code”.
 <p align="center">
   <img src="apps/web/public/brand/cursor/cube-2d-light.svg" alt="Cursor" width="28" />
   <br/>
-  <sub>Developed with <a href="https://cursor.com">Cursor</a> · Cursor Ambassador kit</sub>
+  <sub>
+    Developed with <a href="https://cursor.com">Cursor</a>
+    · Author <a href="https://github.com/gurkanfikretgunak">Gürkan Fikret Günak</a>
+    · Cursor Ambassador
+  </sub>
 </p>

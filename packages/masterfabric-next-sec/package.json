@@ -1,0 +1,80 @@
+{
+  "name": "masterfabric-next-sec",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Reusable Next.js security controls for Auth.js, Zod validation, CSP headers, rate limiting, and audit logging (ASVS L2 / SOC2 / ISO ready).",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.js",
+      "default": "./dist/index.js"
+    },
+    "./auth": {
+      "types": "./dist/auth/index.d.ts",
+      "import": "./dist/auth/index.js",
+      "require": "./dist/auth/index.js",
+      "default": "./dist/auth/index.js"
+    },
+    "./headers": {
+      "types": "./dist/headers/index.d.ts",
+      "import": "./dist/headers/index.js",
+      "require": "./dist/headers/index.js",
+      "default": "./dist/headers/index.js"
+    },
+    "./validate": {
+      "types": "./dist/validate/index.d.ts",
+      "import": "./dist/validate/index.js",
+      "require": "./dist/validate/index.js",
+      "default": "./dist/validate/index.js"
+    },
+    "./audit": {
+      "types": "./dist/audit/index.d.ts",
+      "import": "./dist/audit/index.js",
+      "require": "./dist/audit/index.js",
+      "default": "./dist/audit/index.js"
+    },
+    "./rate-limit": {
+      "types": "./dist/rate-limit/index.d.ts",
+      "import": "./dist/rate-limit/index.js",
+      "require": "./dist/rate-limit/index.js",
+      "default": "./dist/rate-limit/index.js"
+    },
+    "./errors": {
+      "types": "./dist/errors/index.d.ts",
+      "import": "./dist/errors/index.js",
+      "require": "./dist/errors/index.js",
+      "default": "./dist/errors/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "dev": "tsc -p tsconfig.json --watch"
+  },
+  "peerDependencies": {
+    "next": ">=15",
+    "next-auth": ">=5.0.0-beta.0",
+    "react": ">=18",
+    "zod": ">=3.23.0"
+  },
+  "dependencies": {
+    "server-only": "^0.0.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "next": "16.3.0",
+    "next-auth": "^5.0.0-beta.29",
+    "typescript": "^5",
+    "zod": "^3.25.67"
+  }
+}

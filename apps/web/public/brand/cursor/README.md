@@ -9,29 +9,31 @@ Color tokens ([Ambassador `brandTokens`](https://github.com/kamilstanuch/cursor-
 | Light | `#26251e` | `#f7f7f4` |
 | Dark | `#edecec` | `#14120b` |
 
+> **GitHub note:** fills are **inline on paths** (no `<style>` classes). GitHub’s image proxy strips CSS from SVGs, which made older marks invisible.
+
 ## Files
 
-| File | Theme | Source / notes |
+| File | Theme | Role |
 | --- | --- | --- |
-| `cube-2d-light.svg` | Light | `CUBE_2D_LIGHT.svg` |
-| `cube-2d-dark.svg` | Dark | 2D cube with dark-theme fg (`#edecec`) |
-| `cube-25d.svg` | Both | `CUBE_25D.svg` (shaded mark; works on light/dark) |
-| `wordmark-light.svg` | Light | `WORDMARK_LIGHT.svg` |
-| `wordmark-dark.svg` | Dark | Wordmark with dark-theme fg |
-| `lockup-horizontal-2d-light.svg` | Light | `LOCKUP_HORIZONTAL_2D_LIGHT.svg` |
-| `lockup-horizontal-2d-dark.svg` | Dark | Horizontal lockup with dark-theme fg |
+| `cube-2d-light.svg` | Light | Compact cube |
+| `cube-2d-dark.svg` | Dark | Compact cube |
+| `cube-25d.svg` | Both | Shaded cube (UI hero) |
+| `wordmark-light.svg` | Light | Wordmark |
+| `wordmark-dark.svg` | Dark | Wordmark |
+| `lockup-horizontal-2d-light.svg` | Light | Cube + wordmark |
+| `lockup-horizontal-2d-dark.svg` | Dark | Cube + wordmark |
 
-## Usage
+## README usage (theme-aware)
 
-**GitHub README (theme-aware):**
+Use absolute raw URLs so GitHub always resolves the assets:
 
 ```html
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="apps/web/public/brand/cursor/lockup-horizontal-2d-dark.svg" />
-  <img src="apps/web/public/brand/cursor/lockup-horizontal-2d-light.svg" alt="Cursor" width="220" />
+  <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/gurkanfikretgunak/cursor-security/main/apps/web/public/brand/cursor/lockup-horizontal-2d-dark.svg" />
+  <img src="https://raw.githubusercontent.com/gurkanfikretgunak/cursor-security/main/apps/web/public/brand/cursor/lockup-horizontal-2d-light.svg" alt="Cursor" width="240" />
 </picture>
 ```
 
-**Product UI (this app is light):** use `*-light.svg` / `cube-25d.svg`.
+**Product UI (this app is light):** use `*-light.svg` / `cube-25d.svg` via `/brand/cursor/...`.
 
 Refer to the product as **Cursor** — not “Cursor AI” or “Cursor Code”.

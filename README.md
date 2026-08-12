@@ -1,7 +1,7 @@
 <p align="center">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="apps/web/public/brand/cursor/lockup-horizontal-2d-dark.svg" />
-    <img src="apps/web/public/brand/cursor/lockup-horizontal-2d-light.svg" alt="Cursor" width="240" />
+    <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/gurkanfikretgunak/cursor-security/main/apps/web/public/brand/cursor/lockup-horizontal-2d-dark.svg" />
+    <img src="https://raw.githubusercontent.com/gurkanfikretgunak/cursor-security/main/apps/web/public/brand/cursor/lockup-horizontal-2d-light.svg" alt="Cursor" width="240" />
   </picture>
 </p>
 
@@ -143,8 +143,8 @@ cursor-security/
 
 <p align="center">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="apps/web/public/brand/cursor/cube-2d-dark.svg" />
-    <img src="apps/web/public/brand/cursor/cube-2d-light.svg" alt="Cursor cube" width="56" />
+    <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/gurkanfikretgunak/cursor-security/main/apps/web/public/brand/cursor/cube-2d-dark.svg" />
+    <img src="https://raw.githubusercontent.com/gurkanfikretgunak/cursor-security/main/apps/web/public/brand/cursor/cube-2d-light.svg" alt="Cursor cube" width="56" />
   </picture>
 </p>
 
@@ -441,7 +441,7 @@ Template: [`apps/web/.env.example`](./apps/web/.env.example) (`.env*` is gitigno
 - Product name in this repo: **Cursor Security**
 - Company/product short name: **Cursor** — not “Cursor AI” or “Cursor Code” ([brand guidelines](https://cursor.com/brand))
 - Official SVGs from [Ambassador Studio library](https://kamilstanuch.github.io/cursor-ambassador-studio/#/library) → [`apps/web/public/brand/cursor/`](./apps/web/public/brand/cursor/)
-- README logos use `<picture>` + `prefers-color-scheme` so **light/dark GitHub themes** both stay readable
+- README logos use **absolute** `raw.githubusercontent.com` URLs + `<picture>` / `prefers-color-scheme` (GitHub-safe inline `fill`, no CSS classes)
 - Brand colors: light fg `#26251e` / dark fg `#edecec` ([brand tokens](https://github.com/kamilstanuch/cursor-ambassador-studio/blob/main/js/brandTokens.js))
 - Product UI (light page): cube mark in header/hero; footer **Developed with Cursor** → https://cursor.com
 - Full asset table: [`apps/web/public/brand/cursor/README.md`](./apps/web/public/brand/cursor/README.md)
@@ -547,8 +547,8 @@ Capability should grow only as fast as verification, observability, and human ac
 
 <p align="center">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="apps/web/public/brand/cursor/cube-2d-dark.svg" />
-    <img src="apps/web/public/brand/cursor/cube-2d-light.svg" alt="Cursor" width="32" />
+    <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/gurkanfikretgunak/cursor-security/main/apps/web/public/brand/cursor/cube-2d-dark.svg" />
+    <img src="https://raw.githubusercontent.com/gurkanfikretgunak/cursor-security/main/apps/web/public/brand/cursor/cube-2d-light.svg" alt="Cursor" width="32" />
   </picture>
   <br/>
   <sub>

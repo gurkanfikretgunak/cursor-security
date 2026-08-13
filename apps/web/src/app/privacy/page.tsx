@@ -13,8 +13,8 @@ export default function PrivacyPage() {
         <h1 className="mt-4 text-3xl font-semibold tracking-tight">Privacy</h1>
         <div className="mt-6 space-y-4 text-[17px] leading-8 text-muted">
           <p>
-            This starter privacy notice covers the Cursor Security demo control surface.
-            Replace with counsel-reviewed language before production.
+            This notice covers the Cursor Security teaching control surface.
+            It is not counsel-reviewed production legal language.
           </p>
           <h2 className="pt-4 text-xl font-semibold text-foreground">
             Data we process
@@ -22,15 +22,23 @@ export default function PrivacyPage() {
           <ul className="list-disc space-y-2 pl-5">
             <li>Account email and name for authentication</li>
             <li>Organization membership and roles</li>
-            <li>Security audit events (login, invites, admin actions)</li>
+            <li>Security audit events (login, channel, org, scans)</li>
+            <li>Compact lab cookies when Postgres is not connected</li>
             <li>Technical logs required to operate the service</li>
           </ul>
           <h2 className="pt-4 text-xl font-semibold text-foreground">
             Purpose
           </h2>
           <p>
-            Provide the service, secure accounts, meet compliance obligations,
-            and investigate abuse.
+            Provide the lab, secure accounts, demonstrate ASVS-style controls,
+            and investigate abuse. See{" "}
+            <a
+              href="https://github.com/gurkanfikretgunak/cursor-security/blob/main/compliance/policies/logging.md"
+              className="underline hover:text-foreground"
+            >
+              logging.md
+            </a>
+            .
           </p>
           <h2 className="pt-4 text-xl font-semibold text-foreground">
             Retention

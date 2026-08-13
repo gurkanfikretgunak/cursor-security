@@ -61,6 +61,42 @@ export function auditDetailParts(item: {
   return parts;
 }
 
+export function auditFacts(item: {
+  actorUserId?: string | null;
+  orgId?: string | null;
+  resourceType?: string | null;
+  resourceId?: string | null;
+  ip?: string | null;
+  userAgent?: string | null;
+  metadata?: Record<string, unknown> | null;
+}): Array<{ label: string; value: string }> {
+  const rows: Array<{ label: string; value: string }> = [];
+  const actor = formatActor(item.actorUserId);
+  if (actor) rows.push({ label: "Actor", value: actor });
+  if (item.resourceType) rows.push({ label: "Resource", value: item.resourceType });
+  if (item.resourceId) rows.push({ label: "Resource id", value: item.resourceId });
+  if (item.orgId) rows.push({ label: "Org", value: item.orgId });
+  if (item.ip) rows.push({ label: "IP", value: item.ip });
+  if (item.userAgent) rows.push({ label: "User agent", value: item.userAgent });
+
+  const meta = item.metadata;
+  if (meta) {
+    for (const [key, raw] of Object.entries(meta)) {
+      if (raw == null || raw === "") continue;
+      const value =
+        typeof raw === "string" || typeof raw === "number" || typeof raw === "boolean"
+          ? String(raw)
+          : JSON.stringify(raw);
+      if (!value || value === "{}") continue;
+      rows.push({
+        label: key.replace(/([A-Z])/g, " $1").replace(/^./, (c) => c.toUpperCase()),
+        value,
+      });
+    }
+  }
+  return rows;
+}
+
 export function auditFamily(
   event: string,
 ): "auth" | "org" | "scan" | "other" {

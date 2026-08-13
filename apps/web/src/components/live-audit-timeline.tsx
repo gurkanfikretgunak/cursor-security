@@ -113,7 +113,7 @@ export function LiveAuditTimeline({
         <div>
           <h2 className="text-xl font-semibold">Full audit timeline</h2>
           <p className="mt-2 text-[16px] leading-7 text-muted">
-            Newest first. Human labels, not raw JSON.
+            Newest first. Click a row to expand actor, channel, reason, and IP.
           </p>
         </div>
         {orgAuditHref ? (

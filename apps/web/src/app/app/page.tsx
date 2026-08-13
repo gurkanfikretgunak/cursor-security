@@ -99,14 +99,22 @@ export default async function AppHomePage() {
             {user.name ? ` · ${user.name}` : ""}
           </p>
         </div>
-        <form action={logoutAction}>
-          <button
-            type="submit"
+        <div className="flex shrink-0 flex-col items-end gap-2">
+          <Link
+            href="/app/scans"
             className="border border-line px-4 py-2 text-sm hover:border-foreground"
           >
-            Sign out
-          </button>
-        </form>
+            Repo scans →
+          </Link>
+          <form action={logoutAction}>
+            <button
+              type="submit"
+              className="border border-line px-4 py-2 text-sm hover:border-foreground"
+            >
+              Sign out
+            </button>
+          </form>
+        </div>
       </div>
 
       <section className="mt-10 border border-line bg-surface px-6 py-6">

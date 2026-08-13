@@ -50,6 +50,8 @@ export type RateLimiter = {
   ): Promise<RateLimitResult>;
 };
 
+export { RedisRateLimitStore, type RedisLike } from "./redis.js";
+
 export function createRateLimiter(
   store: RateLimitStore = new MemoryRateLimitStore(),
 ): RateLimiter {

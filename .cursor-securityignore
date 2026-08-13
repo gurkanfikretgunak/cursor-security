@@ -1,0 +1,10 @@
+# Cursor Security MCP suppressions
+# Paths (glob), finding ids (`id:...`), or rule ids (`rule:...`)
+
+# Fixture intentionally contains vulnerabilities for tests
+packages/cursor-security-mcp/fixtures/**
+
+# Scanner implementation noise when scanning this monorepo
+packages/cursor-security-mcp/src/scanners/**
+packages/cursor-security-mcp/src/sarif.ts
+packages/cursor-security-mcp/src/cli.ts

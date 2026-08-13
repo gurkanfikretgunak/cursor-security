@@ -104,3 +104,22 @@ export const auditEvents = pgTable("audit_events", {
   metadata: jsonb("metadata").$type<Record<string, unknown>>().default({}),
   createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
 });
+
+/** Persisted MCP / CLI security scan reports (ingested from agents or UI). */
+export const securityScans = pgTable("security_scans", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  orgId: uuid("org_id").references(() => organizations.id, {
+    onDelete: "cascade",
+  }),
+  actorUserId: uuid("actor_user_id").references(() => users.id, {
+    onDelete: "set null",
+  }),
+  projectLabel: text("project_label").notNull().default("workspace"),
+  overallScore: integer("overall_score").notNull(),
+  grade: text("grade").notNull(),
+  summary: text("summary").notNull().default(""),
+  findingCount: integer("finding_count").notNull().default(0),
+  source: text("source").notNull().default("mcp"),
+  report: jsonb("report").$type<Record<string, unknown>>().notNull(),
+  createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
+});

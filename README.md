@@ -61,17 +61,20 @@
 
 **[`@cursor-security/mcp`](./packages/cursor-security-mcp)** turns your Cursor session into a living security review board. Point the agent at any repository and it scores posture across **secrets, client-side, backend/API, dependencies, config/infra, and project hygiene** — then returns file-level findings the same chat can fix.
 
-> **One install. Six scanners. Nine MCP tools. Full-stack visibility.**  
-> Not a vague checklist — concrete recommendations for React/Next clients, Node/Python APIs, Docker, CI, and supply chain.
+> **One install. Seven scanners. Twelve MCP tools. CLI + SARIF + `/app/scans`.**  
+> Not a vague checklist — concrete recommendations for React/Next clients, Node/Python APIs, Docker, CI, agents, and supply chain.
 
 | Domain | What it checks |
 | --- | --- |
 | **Secrets** | Hardcoded API keys, JWTs, private keys, committed `.env` files |
 | **Client** | XSS sinks, token-in-`localStorage`, CSP gaps, insecure HTTP |
 | **Backend** | SQLi/command patterns, CORS `*`, auth gaps, cookie flags, rate limits |
-| **Dependencies** | Lockfiles, risky packages, floating versions, dangerous npm scripts |
+| **Dependencies** | Lockfiles, risky packages, floating versions, optional **npm audit/OSV** |
 | **Config** | `.gitignore`, Docker root user, CI security jobs, headers, `.npmrc` tokens |
 | **Project** | README/license/tests, Node engines, TypeScript strictness |
+| **Agent** | Auto-approve, shell tools, dangerous MCP flags, sandbox signals |
+
+Also: **CLI + SARIF**, `.cursor-securityignore`, GitHub Action / workflow, ingest API → [`/app/scans`](./apps/web/src/app/app/scans/page.tsx). See [`docs/github-app.md`](./docs/github-app.md).
 
 **Ask the agent:**
 
@@ -249,6 +252,7 @@ If you renamed the DB from an older `aegis` volume, recreate: `docker compose do
 | [`/MANIFEST.md`](./MANIFEST.md) | Raw markdown manifesto (also in repo root) | [`MANIFEST.md`](./MANIFEST.md) |
 | [`/login`](./apps/web/src/app/login/page.tsx) | Magic link + auth handshake UI | [`login/page.tsx`](./apps/web/src/app/login/page.tsx) |
 | [`/app`](./apps/web/src/app/app/page.tsx) | Authenticated “X-ray” / report / org / audit | [`app/page.tsx`](./apps/web/src/app/app/page.tsx) |
+| [`/app/scans`](./apps/web/src/app/app/scans/page.tsx) | Persist & review MCP/CLI repo scan grades | [`scans/page.tsx`](./apps/web/src/app/app/scans/page.tsx) |
 | `/app/org/[orgId]/audit` | Org audit trail (RBAC) | [`audit/page.tsx`](./apps/web/src/app/app/org/[orgId]/audit/page.tsx) |
 
 Footer on public pages: **Author** + **Developed with Cursor** (official cube mark) — see [`site-footer.tsx`](./apps/web/src/components/site-footer.tsx).
@@ -466,7 +470,9 @@ Index: [`compliance/README.md`](./compliance/README.md).
 | `npm run dev` | Next.js dev server (`@cursor-security/web`) |
 | `npm run build` | Build `masterfabric-next-sec` + MCP + web |
 | `npm run typecheck` | Typecheck packages + web |
+| `npm run test` | MCP scanner unit tests |
 | `npm run mcp` | Start `@cursor-security/mcp` (stdio) |
+| `npm run mcp:scan -- .` | CLI scan (markdown/json/sarif) |
 | `npm run lint` | ESLint web |
 | `npm run db:generate` | Drizzle generate |
 | `npm run db:migrate` | Apply migrations |

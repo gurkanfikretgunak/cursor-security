@@ -1,0 +1,48 @@
+name: Security scan
+
+on:
+  pull_request:
+  push:
+    branches: [main, master]
+  workflow_dispatch:
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Build MCP
+        run: npm run build -w @cursor-security/mcp
+
+      - name: Run repository scan (SARIF)
+        run: |
+          node packages/cursor-security-mcp/dist/cli.js \
+            --format sarif \
+            --out security-results.sarif \
+            --fail-on critical \
+            .
+
+      - name: Upload SARIF
+        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: security-results.sarif
+        continue-on-error: true
+
+      - name: Markdown summary
+        if: always()
+        run: |
+          node packages/cursor-security-mcp/dist/cli.js --format markdown . >> "$GITHUB_STEP_SUMMARY"

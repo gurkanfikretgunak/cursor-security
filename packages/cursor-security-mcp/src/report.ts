@@ -22,6 +22,7 @@ const DOMAIN_LABELS: Record<SecurityDomain, string> = {
   dependencies: "Dependencies & supply chain",
   config: "Config & infrastructure",
   project: "Project hygiene",
+  agent: "Agent / MCP trust",
 };
 
 export const SECURITY_SERVICES: ServiceStatus[] = [
@@ -49,9 +50,9 @@ export const SECURITY_SERVICES: ServiceStatus[] = [
   {
     id: "dependencies",
     name: "Dependency Auditor",
-    description: "Reviews manifests, lockfiles, risky packages, and dangerous scripts.",
+    description: "Reviews manifests, lockfiles, risky packages, npm audit/OSV signals.",
     status: "ready",
-    checks: 6,
+    checks: 8,
   },
   {
     id: "config",
@@ -66,6 +67,13 @@ export const SECURITY_SERVICES: ServiceStatus[] = [
     description: "Checks README/license/tests/engines and TypeScript strictness.",
     status: "ready",
     checks: 5,
+  },
+  {
+    id: "agent",
+    name: "Agent / MCP Trust Scanner",
+    description: "Least agency signals: auto-approve, shell tools, sandbox, dangerous MCP flags.",
+    status: "ready",
+    checks: 6,
   },
 ];
 
@@ -104,7 +112,8 @@ export function buildDomainResult(
 
 export function buildReport(
   projectPath: string,
-  findings: Finding[]
+  findings: Finding[],
+  suppressedCount = 0
 ): SecurityReport {
   const domains: SecurityDomain[] = [
     "secrets",
@@ -113,6 +122,7 @@ export function buildReport(
     "dependencies",
     "config",
     "project",
+    "agent",
   ];
   const domainResults = domains.map((d) => buildDomainResult(d, findings));
   const overallScore = Math.round(
@@ -125,7 +135,7 @@ export function buildReport(
   const summary =
     critical + high === 0
       ? `Security posture looks solid (grade ${grade}). Keep monitoring dependencies and CI scans.`
-      : `Found ${critical} critical and ${high} high issues. Prioritize secrets, injection, and auth gaps first.`;
+      : `Found ${critical} critical and ${high} high issues. Prioritize secrets, injection, auth, and agent trust gaps first.`;
 
   return {
     projectPath,
@@ -138,6 +148,7 @@ export function buildReport(
       (a, b) => SEVERITY_WEIGHT[b.severity] - SEVERITY_WEIGHT[a.severity]
     ),
     services: SECURITY_SERVICES,
+    suppressedCount,
   };
 }
 
@@ -149,10 +160,11 @@ export function formatReportMarkdown(report: SecurityReport): string {
     `- **Scanned at:** ${report.scannedAt}`,
     `- **Score:** ${report.overallScore}/100 (grade **${report.grade}**)`,
     `- **Summary:** ${report.summary}`,
-    ``,
-    `## Domain scores`,
-    ``,
   ];
+  if (report.suppressedCount) {
+    lines.push(`- **Suppressed:** ${report.suppressedCount} finding(s) via ignore rules`);
+  }
+  lines.push(``, `## Domain scores`, ``);
 
   for (const domain of report.domains) {
     lines.push(

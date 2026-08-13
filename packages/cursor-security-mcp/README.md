@@ -1,33 +1,58 @@
 # `@cursor-security/mcp`
 
-stdio **Model Context Protocol** server that turns a Cursor coding session into a living security review board.
+stdio **Model Context Protocol** server + CLI that turns a Cursor coding session (or CI job) into a living security review board.
 
-Point it at any project path and it scores posture across **secrets, client-side, backend/API, dependencies, config/infra, and project hygiene** — then returns actionable findings the agent can fix in the same chat.
+## Domains (7)
 
-## Tools (9)
+Secrets · Client · Backend · Dependencies (+ optional npm audit) · Config · Project · **Agent / MCP trust**
+
+## Tools (12)
 
 | Tool | Purpose |
 | --- | --- |
-| `security_services_status` | List scanner services and readiness |
-| `security_list_checks` | Describe domains and tools |
-| `security_scan_full` | Full multi-domain audit |
-| `security_scan_secrets` | Secrets & credentials |
-| `security_scan_client` | Browser / client risks |
-| `security_scan_backend` | API / server risks |
-| `security_scan_dependencies` | Supply chain / manifests |
-| `security_scan_config` | gitignore, Docker, CI, headers |
-| `security_score` | Compact scorecard (A–F) |
+| `security_services_status` | Scanner readiness |
+| `security_list_checks` | Domain catalog |
+| `security_scan_full` | Full audit |
+| `security_scan_secrets` | Secrets |
+| `security_scan_client` | Client / XSS / storage |
+| `security_scan_backend` | API / injection / CORS |
+| `security_scan_dependencies` | Supply chain (+ `includeOsv`) |
+| `security_scan_config` | Docker / CI / headers |
+| `security_scan_project` | Hygiene |
+| `security_scan_agent` | Auto-approve, shell tools, sandbox |
+| `security_score` | Compact A–F scorecard |
+| `security_export_sarif` | SARIF 2.1 for code scanning |
 
-## Setup
+## Ignore file
 
-From the monorepo root:
+Create `.cursor-securityignore` at the project root:
 
-```bash
-npm install
-npm run build -w @cursor-security/mcp
+```gitignore
+# path globs
+fixtures/**
+docs/examples/**
+
+# suppress by finding id or rule id
+id:deps-no-audit-script
+rule:agent-missing-sandbox
 ```
 
-Cursor MCP config (`mcp.json.example`):
+## CLI
+
+```bash
+npm run build -w @cursor-security/mcp
+
+# Markdown to stdout
+node packages/cursor-security-mcp/dist/cli.js .
+
+# SARIF for GitHub
+node packages/cursor-security-mcp/dist/cli.js --format sarif --out results.sarif --fail-on high .
+
+# With npm audit signals
+node packages/cursor-security-mcp/dist/cli.js --osv --format json .
+```
+
+## Cursor MCP config
 
 ```json
 {
@@ -40,6 +65,18 @@ Cursor MCP config (`mcp.json.example`):
 }
 ```
 
-Then ask: *“Run `security_scan_full` on this workspace.”*
+## Persist into the web app
 
-Scanners are **defensive static audits** — they highlight risky patterns and misconfigurations. They do not generate exploits or attack payloads.
+`POST /api/scans` with `{ "report": { ...SecurityReport }, "source": "mcp" }` (authenticated). History UI: `/app/scans`.
+
+## Sandbox helpers
+
+`src/sandbox/policy.ts` — `gateAgentTool`, `createKillSwitch`, `DEFAULT_SANDBOX_POLICY` for agent runtimes / GitHub App workers.
+
+## Tests
+
+```bash
+npm run test -w @cursor-security/mcp
+```
+
+Scanners are **defensive static audits**. They do not generate exploits or attack payloads.

@@ -6,7 +6,8 @@ export type SecurityDomain =
   | "backend"
   | "dependencies"
   | "config"
-  | "project";
+  | "project"
+  | "agent";
 
 export interface Finding {
   id: string;
@@ -17,6 +18,7 @@ export interface Finding {
   file?: string;
   line?: number;
   recommendation: string;
+  ruleId?: string;
 }
 
 export interface DomainResult {
@@ -37,6 +39,7 @@ export interface SecurityReport {
   domains: DomainResult[];
   findings: Finding[];
   services: ServiceStatus[];
+  suppressedCount?: number;
 }
 
 export interface ServiceStatus {
@@ -45,4 +48,10 @@ export interface ServiceStatus {
   description: string;
   status: "ready" | "degraded" | "unavailable";
   checks: number;
+}
+
+export interface ScanOptions {
+  projectPath?: string;
+  includeOsv?: boolean;
+  ignoreFileName?: string;
 }

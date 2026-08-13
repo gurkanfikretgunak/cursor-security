@@ -120,6 +120,8 @@ export function ChannelSessionPanel() {
   }, [router, searchParams]);
 
   useEffect(() => {
+    // Bind channel session after login when query tokens are present.
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional mount bind
     void run();
   }, [run]);
 

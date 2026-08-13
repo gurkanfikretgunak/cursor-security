@@ -5,11 +5,23 @@ import { securityHeaders } from "masterfabric-next-sec/headers";
 
 const isProd = process.env.NODE_ENV === "production";
 const repoRoot = path.join(fileURLToPath(new URL(".", import.meta.url)), "../..");
-const backendOrigin = process.env.BACKEND_URL || process.env.NEXT_PUBLIC_BACKEND_URL;
+const backendOrigin = (
+  process.env.BACKEND_URL ||
+  process.env.NEXT_PUBLIC_BACKEND_URL ||
+  "https://cursor-security-api.onrender.com"
+).replace(/\/$/, "");
 
 const nextConfig: NextConfig = {
   outputFileTracingRoot: repoRoot,
   transpilePackages: ["masterfabric-next-sec"],
+  async rewrites() {
+    return [
+      {
+        source: "/backend/:path*",
+        destination: `${backendOrigin}/:path*`,
+      },
+    ];
+  },
   async headers() {
     return [
       {
@@ -22,9 +34,7 @@ const nextConfig: NextConfig = {
             // next/font Google fonts
             "font-src": "'self' data: https://fonts.gstatic.com",
             "style-src": "'self' 'unsafe-inline' https://fonts.googleapis.com",
-            "connect-src": backendOrigin
-              ? `'self' ${backendOrigin}`
-              : "'self'",
+            "connect-src": `'self' ${backendOrigin}`,
           },
         }),
       },

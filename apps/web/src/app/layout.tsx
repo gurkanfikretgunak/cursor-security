@@ -17,7 +17,7 @@ const mono = JetBrains_Mono({
 export const metadata: Metadata = {
   title: "Cursor Security — Agentic AI Security",
   description:
-    "A single-page guide and public manifest for securing agentic AI systems: least agency, tool trust, approvals, and containment.",
+    "Identity, least agency, audit, and containment for systems that act. Ten principles, threat catalog, ASVS-mapped lab, and a Cursor Security MCP.",
 };
 
 export default function RootLayout({

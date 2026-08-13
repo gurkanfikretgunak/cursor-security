@@ -19,11 +19,14 @@ export async function SiteHeader() {
           <Link href="/#principles" className="hover:text-foreground">
             Principles
           </Link>
+          <Link href="/#threats" className="hover:text-foreground">
+            Threats
+          </Link>
           <Link href="/security" className="hover:text-foreground">
             Security
           </Link>
-          <Link href="/privacy" className="hover:text-foreground">
-            Privacy
+          <Link href="/#sources" className="hover:text-foreground">
+            Sources
           </Link>
           {session?.user ? (
             <Link href="/app" className="hover:text-foreground">

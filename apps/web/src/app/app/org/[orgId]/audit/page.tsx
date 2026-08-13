@@ -21,6 +21,7 @@ function toItems(
     resourceType?: string | null;
     resourceId?: string | null;
     ip?: string | null;
+    userAgent?: string | null;
     metadata?: Record<string, unknown> | null;
   }>,
 ): AuditListItem[] {
@@ -34,6 +35,7 @@ function toItems(
     resourceType: e.resourceType ?? null,
     resourceId: e.resourceId ?? null,
     ip: e.ip ?? null,
+    userAgent: e.userAgent ?? null,
     metadata: e.metadata ?? null,
   }));
 }
@@ -69,7 +71,7 @@ export default async function OrgAuditPage({
           {labOrg.name} audit log
         </h1>
         <p className="mt-2 text-muted">
-          Tenant activity for this lab session. Newest first.
+          Tenant activity for this lab session. Click a row to expand detail.
         </p>
         <p className="mt-4">
           <Link href="/app" className="text-sm underline">

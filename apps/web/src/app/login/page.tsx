@@ -23,11 +23,13 @@ export default async function LoginPage({
           Sign in
         </p>
         <h1 className="mt-4 text-3xl font-semibold tracking-tight">
-          Magic link login
+          Sign in to the lab
         </h1>
         <p className="mt-3 max-w-xl text-[17px] leading-8 text-muted">
-          Passwordless email sign-in with a one-time auth handshake + HttpOnly
-          barrier cookie, session cookies, rate limits, and audit events — via{" "}
+          Device handshake first, then a session. Production lab uses a
+          credentials test-login when SMTP and Postgres are not wired. Magic
+          link stays available once email delivery exists. All of it writes
+          audit events via{" "}
           <code className="font-mono text-sm">masterfabric-next-sec</code>.
         </p>
         {params.error ? (

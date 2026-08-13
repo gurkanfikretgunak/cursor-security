@@ -8,10 +8,12 @@
   ],
   "scripts": {
     "dev": "npm run dev -w @cursor-security/web",
-    "build": "npm run build -w masterfabric-next-sec && npm run build -w @cursor-security/web",
+    "build": "npm run build -w masterfabric-next-sec && npm run build -w @cursor-security/mcp && npm run build -w @cursor-security/web",
     "start": "npm run start -w @cursor-security/web",
     "lint": "npm run lint -w @cursor-security/web",
-    "typecheck": "npm run typecheck -w masterfabric-next-sec && npm run typecheck -w @cursor-security/web",
+    "typecheck": "npm run typecheck -w masterfabric-next-sec && npm run typecheck -w @cursor-security/mcp && npm run typecheck -w @cursor-security/web",
+    "mcp": "npm run start -w @cursor-security/mcp",
+    "mcp:dev": "npm run dev -w @cursor-security/mcp",
     "db:generate": "npm run db:generate -w @cursor-security/web",
     "db:migrate": "npm run db:migrate -w @cursor-security/web",
     "db:studio": "npm run db:studio -w @cursor-security/web"

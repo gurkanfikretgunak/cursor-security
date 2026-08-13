@@ -17,6 +17,7 @@ import { CreateOrgForm } from "@/components/create-org-form";
 import { InviteMemberForm } from "@/components/invite-member-form";
 import { LiveAuditTimeline } from "@/components/live-audit-timeline";
 import { hasRemoteDatabase } from "@/lib/db-mode";
+import { listLabMembers, readLabEvents } from "@/lib/lab-store";
 
 export default async function AppHomePage() {
   const session = await auth();
@@ -27,7 +28,7 @@ export default async function AppHomePage() {
     redirect("/login");
   }
 
-  const orgs = hasRemoteDatabase() ? await listUserOrgs(user.id) : [];
+  const orgs = await listUserOrgs(user.id);
   const primaryOrg = orgs[0];
 
   let members: Array<{
@@ -59,7 +60,7 @@ export default async function AppHomePage() {
         .where(orgFilter)
         .orderBy(desc(auditEvents.createdAt))
         .limit(100)
-    : [];
+    : await readLabEvents();
 
   if (primaryOrg && hasRemoteDatabase()) {
     members = await db
@@ -72,6 +73,13 @@ export default async function AppHomePage() {
       .from(memberships)
       .innerJoin(users, eq(users.id, memberships.userId))
       .where(eq(memberships.orgId, primaryOrg.id));
+  } else if (primaryOrg) {
+    members = (await listLabMembers(primaryOrg.id)).map((m) => ({
+      userId: m.userId,
+      email: m.email,
+      name: m.name,
+      role: m.role,
+    }));
   }
 
   const canAdmin =
@@ -159,6 +167,11 @@ export default async function AppHomePage() {
           </strong>
           : every step is bound to live audit evidence. Not a prompt — enforced
           controls.
+        </p>
+        <p className="mt-3 font-mono text-[11px] leading-5 text-muted">
+          {hasRemoteDatabase()
+            ? "Evidence is read from Postgres audit_events."
+            : "Evidence is a signed HttpOnly lab cookie until DATABASE_URL is connected. Create an org and invite a member to raise this grade to A."}
         </p>
       </section>
 
@@ -258,11 +271,9 @@ export default async function AppHomePage() {
             {orgs.length === 0 ? (
               <div className="mt-3">
                 <p className="text-sm text-muted">
-                  {hasRemoteDatabase()
-                    ? "No organization yet — create a tenant boundary."
-                    : "Organizations need a remote DATABASE_URL. Login and channel probes still work."}
+                  No organization yet — create a tenant boundary.
                 </p>
-                {hasRemoteDatabase() ? <CreateOrgForm /> : null}
+                <CreateOrgForm />
               </div>
             ) : (
               <ul className="mt-3 space-y-2">

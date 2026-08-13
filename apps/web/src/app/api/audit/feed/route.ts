@@ -7,6 +7,7 @@ import { db } from "@/db";
 import { auditEvents } from "@/db/schema";
 import { listUserOrgs } from "@/lib/orgs";
 import { hasRemoteDatabase } from "@/lib/db-mode";
+import { readLabEvents } from "@/lib/lab-store";
 import { describeAuditEvent } from "@/lib/security-report";
 
 export async function GET(request: Request) {
@@ -14,10 +15,23 @@ export async function GET(request: Request) {
     const session = await auth();
     const user = requireUser(session);
     if (!hasRemoteDatabase()) {
+      const events = await readLabEvents();
+      const limitRaw = Number(
+        new URL(request.url).searchParams.get("limit") ?? "100",
+      );
+      const limit = Math.min(
+        100,
+        Math.max(1, Number.isFinite(limitRaw) ? limitRaw : 100),
+      );
+      const sliced = events.slice(0, limit);
       return NextResponse.json({
         fetchedAt: new Date().toISOString(),
-        count: 0,
-        events: [],
+        count: sliced.length,
+        events: sliced.map((e) => ({
+          ...e,
+          createdAt: e.createdAt.toISOString(),
+          label: describeAuditEvent(e.event),
+        })),
       });
     }
     const limitRaw = Number(

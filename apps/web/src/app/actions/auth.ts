@@ -7,6 +7,7 @@ import { signIn, signOut } from "@/auth";
 import { audit } from "@/lib/audit";
 import { assertAuthHandshake } from "@/lib/handshake";
 import { limiter } from "@/lib/rate-limit";
+import { clearLabState } from "@/lib/lab-store";
 
 const MagicLinkSchema = z.object({
   email: z.string().trim().email().max(320),
@@ -116,6 +117,14 @@ export const requestTestLogin = actionHandler(
       throw new AppError("UNAUTHORIZED", "Test login failed.");
     }
 
+    await audit.write({
+      event: "auth.login",
+      actorUserId: `test:${input.email.toLowerCase()}`,
+      ip: ctx.ip,
+      userAgent: ctx.userAgent,
+      metadata: { email: input.email.toLowerCase(), method: "test-login" },
+    });
+
     return {
       signedIn: true,
       redirectTo: sanitizeCallback(input.callbackUrl, input.handshakeId),
@@ -124,6 +133,7 @@ export const requestTestLogin = actionHandler(
 );
 
 export async function logoutAction() {
+  await clearLabState();
   await signOut({ redirectTo: "/" });
 }
 

@@ -69,6 +69,60 @@ export const requestMagicLink = actionHandler(
   },
 );
 
+const TestLoginSchema = z.object({
+  email: z.string().trim().email().max(320),
+  password: z.string().min(1).max(200),
+  callbackUrl: z.string().max(500).optional(),
+  handshakeId: z.string().uuid(),
+});
+
+export const requestTestLogin = actionHandler(
+  TestLoginSchema,
+  async (input, ctx) => {
+    await assertAuthHandshake(input.handshakeId);
+
+    const key = `auth-test:${ctx.ip ?? "unknown"}:${input.email.toLowerCase()}`;
+    const limited = await limiter.check(key, "auth");
+    if (!limited.success) {
+      throw new AppError("RATE_LIMITED", "Too many login attempts. Try again later.");
+    }
+
+    try {
+      await signIn("test-login", {
+        email: input.email.toLowerCase(),
+        password: input.password,
+        redirectTo: sanitizeCallback(input.callbackUrl, input.handshakeId),
+        redirect: false,
+      });
+    } catch (error) {
+      await audit.write({
+        event: "auth.failure",
+        ip: ctx.ip,
+        userAgent: ctx.userAgent,
+        metadata: {
+          email: input.email.toLowerCase(),
+          handshakeId: input.handshakeId,
+          method: "test-login",
+        },
+      });
+      if (
+        typeof error === "object" &&
+        error &&
+        "digest" in error &&
+        String((error as { digest?: string }).digest).includes("NEXT_REDIRECT")
+      ) {
+        throw error;
+      }
+      throw new AppError("UNAUTHORIZED", "Test login failed.");
+    }
+
+    return {
+      signedIn: true,
+      redirectTo: sanitizeCallback(input.callbackUrl, input.handshakeId),
+    };
+  },
+);
+
 export async function logoutAction() {
   await signOut({ redirectTo: "/" });
 }

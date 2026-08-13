@@ -8,8 +8,7 @@ const connectionString =
 const useSsl =
   process.env.DATABASE_SSL === "false"
     ? false
-    : process.env.NODE_ENV === "production" ||
-      /render\.com|sslmode=require/i.test(connectionString);
+    : /render\.com|sslmode=require/i.test(connectionString);
 
 const globalForDb = globalThis as unknown as {
   pg?: ReturnType<typeof postgres>;

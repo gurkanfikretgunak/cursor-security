@@ -1,8 +1,10 @@
 import { DrizzleAdapter } from "@auth/drizzle-adapter";
 import NextAuth from "next-auth";
+import Credentials from "next-auth/providers/credentials";
 import type { Provider } from "next-auth/providers";
 import { createAuthConfig } from "masterfabric-next-sec/auth";
 import { db } from "@/db";
+import { hasRemoteDatabase } from "@/lib/db-mode";
 import {
   accounts,
   sessions,
@@ -10,6 +12,8 @@ import {
   verificationTokens,
 } from "@/db/schema";
 import { audit } from "@/lib/audit";
+
+const remoteDb = hasRemoteDatabase();
 
 function magicLinkProvider(): Provider {
   return {
@@ -20,7 +24,6 @@ function magicLinkProvider(): Provider {
     maxAge: 24 * 60 * 60,
     async sendVerificationRequest({ identifier, url }) {
       if (process.env.SMTP_HOST && process.env.SMTP_USER) {
-        // Production path: wire Nodemailer/Resend here using SMTP_* env vars.
         console.info(
           JSON.stringify({
             context: "magic-link",
@@ -29,7 +32,6 @@ function magicLinkProvider(): Provider {
           }),
         );
       }
-      // Always log in non-production for local certifier demos.
       if (process.env.NODE_ENV !== "production") {
         console.info(`[cursor-security magic-link] ${identifier} -> ${url}`);
       } else if (!process.env.SMTP_HOST) {
@@ -37,7 +39,7 @@ function magicLinkProvider(): Provider {
           JSON.stringify({
             context: "magic-link",
             to: identifier,
-            note: "Set SMTP_* or a transactional email provider before production use.",
+            note: "Set SMTP_* or AUTH_TEST_PASSWORD for production sign-in.",
           }),
         );
       }
@@ -45,19 +47,50 @@ function magicLinkProvider(): Provider {
   } as Provider;
 }
 
+function testLoginProvider(): Provider {
+  return Credentials({
+    id: "test-login",
+    name: "Test login",
+    credentials: {
+      email: { label: "Email", type: "email" },
+      password: { label: "Password", type: "password" },
+    },
+    async authorize(credentials) {
+      const expected = process.env.AUTH_TEST_PASSWORD;
+      const email = String(credentials?.email ?? "")
+        .trim()
+        .toLowerCase();
+      const password = String(credentials?.password ?? "");
+      if (!expected || !email.includes("@") || password !== expected) {
+        return null;
+      }
+      return {
+        id: `test:${email}`,
+        email,
+        name: email.split("@")[0],
+      };
+    },
+  });
+}
+
 export const { handlers, auth, signIn, signOut } = NextAuth(
   createAuthConfig({
-    adapter: DrizzleAdapter(db, {
-      usersTable: users,
-      accountsTable: accounts,
-      sessionsTable: sessions,
-      verificationTokensTable: verificationTokens,
-    }),
-    providers: [magicLinkProvider()],
+    secret: process.env.AUTH_SECRET,
+    adapter: remoteDb
+      ? DrizzleAdapter(db, {
+          usersTable: users,
+          accountsTable: accounts,
+          sessionsTable: sessions,
+          verificationTokensTable: verificationTokens,
+        })
+      : undefined,
+    session: { strategy: remoteDb ? "database" : "jwt" },
+    providers: [magicLinkProvider(), testLoginProvider()],
     callbacks: {
-      session({ session, user }) {
-        if (session.user) {
-          session.user.id = user.id;
+      session({ session, user, token }) {
+        const id = user?.id ?? token?.sub;
+        if (session.user && id) {
+          session.user.id = id;
         }
         return session;
       },

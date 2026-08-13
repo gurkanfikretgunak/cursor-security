@@ -16,6 +16,7 @@ import { ChannelSessionPanel } from "@/components/channel-session-panel";
 import { CreateOrgForm } from "@/components/create-org-form";
 import { InviteMemberForm } from "@/components/invite-member-form";
 import { LiveAuditTimeline } from "@/components/live-audit-timeline";
+import { hasRemoteDatabase } from "@/lib/db-mode";
 
 export default async function AppHomePage() {
   const session = await auth();
@@ -26,7 +27,7 @@ export default async function AppHomePage() {
     redirect("/login");
   }
 
-  const orgs = await listUserOrgs(user.id);
+  const orgs = hasRemoteDatabase() ? await listUserOrgs(user.id) : [];
   const primaryOrg = orgs[0];
 
   let members: Array<{
@@ -40,25 +41,27 @@ export default async function AppHomePage() {
     ? or(eq(auditEvents.actorUserId, user.id), eq(auditEvents.orgId, primaryOrg.id))
     : eq(auditEvents.actorUserId, user.id);
 
-  const events: AuditRow[] = await db
-    .select({
-      id: auditEvents.id,
-      event: auditEvents.event,
-      createdAt: auditEvents.createdAt,
-      actorUserId: auditEvents.actorUserId,
-      orgId: auditEvents.orgId,
-      resourceType: auditEvents.resourceType,
-      resourceId: auditEvents.resourceId,
-      ip: auditEvents.ip,
-      userAgent: auditEvents.userAgent,
-      metadata: auditEvents.metadata,
-    })
-    .from(auditEvents)
-    .where(orgFilter)
-    .orderBy(desc(auditEvents.createdAt))
-    .limit(100);
+  const events: AuditRow[] = hasRemoteDatabase()
+    ? await db
+        .select({
+          id: auditEvents.id,
+          event: auditEvents.event,
+          createdAt: auditEvents.createdAt,
+          actorUserId: auditEvents.actorUserId,
+          orgId: auditEvents.orgId,
+          resourceType: auditEvents.resourceType,
+          resourceId: auditEvents.resourceId,
+          ip: auditEvents.ip,
+          userAgent: auditEvents.userAgent,
+          metadata: auditEvents.metadata,
+        })
+        .from(auditEvents)
+        .where(orgFilter)
+        .orderBy(desc(auditEvents.createdAt))
+        .limit(100)
+    : [];
 
-  if (primaryOrg) {
+  if (primaryOrg && hasRemoteDatabase()) {
     members = await db
       .select({
         userId: memberships.userId,

@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState, useTransition } from "react";
-import { requestMagicLink } from "@/app/actions/auth";
+import { requestMagicLink, requestTestLogin } from "@/app/actions/auth";
 
 type Handshake = {
   handshakeId: string;
@@ -79,6 +79,7 @@ export function LoginForm({ callbackUrl }: { callbackUrl?: string }) {
         e.preventDefault();
         const form = new FormData(e.currentTarget);
         const email = String(form.get("email") ?? "");
+        const password = String(form.get("password") ?? "");
         setMessage(null);
         setError(null);
         startTransition(async () => {
@@ -86,6 +87,25 @@ export function LoginForm({ callbackUrl }: { callbackUrl?: string }) {
             let active = handshake;
             if (!active || Date.now() > active.expiresAt - 15_000) {
               active = await refreshHandshake();
+            }
+
+            if (password) {
+              const result = await requestTestLogin(
+                {
+                  email,
+                  password,
+                  callbackUrl,
+                  handshakeId: active.handshakeId,
+                },
+                {},
+              );
+              if (result.ok) {
+                window.location.assign(result.data.redirectTo);
+                return;
+              }
+              setError(result.error.message);
+              await refreshHandshake().catch(() => undefined);
+              return;
             }
 
             const result = await requestMagicLink(
@@ -122,17 +142,29 @@ export function LoginForm({ callbackUrl }: { callbackUrl?: string }) {
           placeholder="you@company.com"
         />
       </label>
+      <label className="block text-sm text-muted">
+        Test password
+        <input
+          name="password"
+          type="password"
+          required
+          className="mt-2 block w-full border border-line bg-white px-3 py-2 text-foreground outline-none focus:border-foreground"
+          placeholder="AUTH_TEST_PASSWORD"
+        />
+      </label>
+      <div className="flex flex-wrap gap-3">
       <button
         type="submit"
         disabled={pending || !handshake}
         className="inline-flex h-11 items-center bg-foreground px-5 text-sm font-medium text-white hover:bg-black disabled:opacity-60"
       >
         {pending
-          ? "Sending…"
+          ? "Signing in…"
           : handshake
-            ? "Email magic link"
+            ? "Sign in"
             : "Preparing secure handshake…"}
       </button>
+      </div>
       {handshake ? (
         <div className="space-y-1 font-mono text-[11px] text-muted">
           <p>

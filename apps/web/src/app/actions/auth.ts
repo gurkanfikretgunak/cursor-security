@@ -39,6 +39,8 @@ export const requestMagicLink = actionHandler(
         event: "auth.failure",
         ip: ctx.ip,
         userAgent: ctx.userAgent,
+        resourceType: "session",
+        resourceId: input.email.toLowerCase(),
         metadata: {
           email: input.email.toLowerCase(),
           handshakeId: input.handshakeId,
@@ -100,6 +102,8 @@ export const requestTestLogin = actionHandler(
         event: "auth.failure",
         ip: ctx.ip,
         userAgent: ctx.userAgent,
+        resourceType: "session",
+        resourceId: input.email.toLowerCase(),
         metadata: {
           email: input.email.toLowerCase(),
           handshakeId: input.handshakeId,
@@ -122,6 +126,8 @@ export const requestTestLogin = actionHandler(
       actorUserId: `test:${input.email.toLowerCase()}`,
       ip: ctx.ip,
       userAgent: ctx.userAgent,
+      resourceType: "session",
+      resourceId: input.email.toLowerCase(),
       metadata: { email: input.email.toLowerCase(), method: "test-login" },
     });
 

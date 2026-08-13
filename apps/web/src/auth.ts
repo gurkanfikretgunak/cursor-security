@@ -104,6 +104,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth(
         await audit.write({
           event: "auth.login",
           actorUserId: user.id,
+          resourceType: "session",
+          resourceId: user.email ?? user.id,
           metadata: { email: user.email ?? null },
         });
       },
@@ -115,6 +117,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth(
         await audit.write({
           event: "auth.logout",
           actorUserId: userId,
+          resourceType: "session",
+          resourceId: userId,
         });
       },
     },

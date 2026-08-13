@@ -5,9 +5,10 @@ import type { AuditEventInput } from "masterfabric-next-sec/audit";
 import type { OrgRole } from "masterfabric-next-sec/auth";
 import type { AuditRow } from "@/lib/security-report";
 
-const MAX_EVENTS = 60;
+const MAX_EVENTS = 40;
 const MAX_SCANS = 6;
 const MAX_AGE = 60 * 60 * 24 * 7;
+const MAX_COOKIE_CHARS = 3500;
 const als = new AsyncLocalStorage<{ state: LabState }>();
 
 type CompactEvent = {
@@ -18,6 +19,9 @@ type CompactEvent = {
   o?: string;
   r?: string;
   d?: string;
+  p?: string;
+  a?: string;
+  m?: Record<string, string>;
 };
 
 export type LabOrg = {
@@ -144,7 +148,12 @@ async function persist(state: LabState): Promise<void> {
   const key = secret();
   if (!key) return;
   const jar = await cookies();
-  jar.set(cookieName(), encode(state, key), cookieOpts(MAX_AGE));
+  let encoded = encode(state, key);
+  while (encoded.length > MAX_COOKIE_CHARS && state.ev.length > 10) {
+    state.ev.pop();
+    encoded = encode(state, key);
+  }
+  jar.set(cookieName(), encoded, cookieOpts(MAX_AGE));
 }
 
 async function withLabState<T>(fn: (state: LabState) => Promise<T> | T): Promise<T> {
@@ -166,6 +175,32 @@ function currentState(fallback: LabState): LabState {
   return als.getStore()?.state ?? fallback;
 }
 
+function compactMeta(
+  metadata: Record<string, unknown> | undefined,
+): Record<string, string> | undefined {
+  if (!metadata) return undefined;
+  const prefer = [
+    "reason",
+    "phase",
+    "route",
+    "channelId",
+    "deviceId",
+    "handshakeId",
+    "email",
+    "method",
+    "grade",
+    "expected",
+  ];
+  const out: Record<string, string> = {};
+  for (const key of prefer) {
+    const value = metadata[key];
+    if (value == null || value === "") continue;
+    out[key] = String(value).slice(0, 64);
+    if (Object.keys(out).length >= 6) break;
+  }
+  return Object.keys(out).length > 0 ? out : undefined;
+}
+
 export async function appendLabEvent(event: AuditEventInput): Promise<void> {
   await withLabState((state) => {
     const row: CompactEvent = {
@@ -176,7 +211,17 @@ export async function appendLabEvent(event: AuditEventInput): Promise<void> {
     if (event.actorUserId) row.u = event.actorUserId;
     if (event.orgId) row.o = event.orgId;
     if (event.resourceType) row.r = event.resourceType;
-    if (event.resourceId) row.d = event.resourceId;
+    if (event.resourceId) row.d = String(event.resourceId).slice(0, 80);
+    if (event.ip && event.ip !== "unknown") row.p = event.ip.slice(0, 64);
+    if (event.userAgent) row.a = event.userAgent.slice(0, 72);
+    const meta = compactMeta(event.metadata);
+    if (meta) {
+      row.m = meta;
+      if (!row.r && meta.channelId) {
+        row.r = "channel";
+        row.d = meta.channelId;
+      }
+    }
     state.ev.unshift(row);
     if (state.ev.length > MAX_EVENTS) state.ev.length = MAX_EVENTS;
   });
@@ -191,9 +236,9 @@ export function labEventsToRows(state: LabState): AuditRow[] {
     orgId: row.o ?? null,
     resourceType: row.r ?? null,
     resourceId: row.d ?? null,
-    ip: null,
-    userAgent: null,
-    metadata: null,
+    ip: row.p ?? null,
+    userAgent: row.a ?? null,
+    metadata: row.m ?? null,
   }));
 }
 

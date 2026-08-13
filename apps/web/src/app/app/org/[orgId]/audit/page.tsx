@@ -20,6 +20,8 @@ function toItems(
     orgId?: string | null;
     resourceType?: string | null;
     resourceId?: string | null;
+    ip?: string | null;
+    metadata?: Record<string, unknown> | null;
   }>,
 ): AuditListItem[] {
   return events.map((e) => ({
@@ -31,6 +33,8 @@ function toItems(
     orgId: e.orgId ?? null,
     resourceType: e.resourceType ?? null,
     resourceId: e.resourceId ?? null,
+    ip: e.ip ?? null,
+    metadata: e.metadata ?? null,
   }));
 }
 

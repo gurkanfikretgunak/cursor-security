@@ -1,4 +1,4 @@
-import { auditFamily, formatActor, formatRelativeTime } from "@/lib/format";
+import { auditDetailParts, auditFamily, formatRelativeTime } from "@/lib/format";
 
 export type AuditListItem = {
   id: string;
@@ -9,6 +9,8 @@ export type AuditListItem = {
   orgId?: string | null;
   resourceType?: string | null;
   resourceId?: string | null;
+  ip?: string | null;
+  metadata?: Record<string, unknown> | null;
 };
 
 function familyLabel(event: string): string {
@@ -17,19 +19,6 @@ function familyLabel(event: string): string {
   if (family === "org") return "Org";
   if (family === "scan") return "Scan";
   return "Event";
-}
-
-function detailLine(item: AuditListItem): string | null {
-  const parts: string[] = [];
-  const actor = formatActor(item.actorUserId);
-  if (actor) parts.push(actor);
-  if (item.resourceType && item.resourceId) {
-    parts.push(`${item.resourceType} ${item.resourceId.slice(0, 8)}`);
-  } else if (item.resourceType) {
-    parts.push(item.resourceType);
-  }
-  if (item.orgId) parts.push(`org ${item.orgId.slice(0, 8)}`);
-  return parts.length > 0 ? parts.join(" · ") : null;
 }
 
 export function AuditEventList({
@@ -46,7 +35,7 @@ export function AuditEventList({
   return (
     <ol className="relative space-y-0 border-l border-line pl-5">
       {events.map((item) => {
-        const details = detailLine(item);
+        const details = auditDetailParts(item);
         return (
           <li key={item.id} className="relative py-3.5">
             <span
@@ -59,8 +48,10 @@ export function AuditEventList({
                 <p className="mt-1 font-mono text-[11px] text-muted">
                   {familyLabel(item.event)} · {item.event}
                 </p>
-                {details ? (
-                  <p className="mt-1 truncate text-[13px] text-muted">{details}</p>
+                {details.length > 0 ? (
+                  <p className="mt-1 text-[13px] leading-6 text-muted">
+                    {details.join(" · ")}
+                  </p>
                 ) : null}
               </div>
               <time

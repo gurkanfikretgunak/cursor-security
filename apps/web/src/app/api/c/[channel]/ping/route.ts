@@ -7,11 +7,14 @@ import {
 } from "masterfabric-next-sec/auth";
 import { toPublicError } from "masterfabric-next-sec/errors";
 import { cookies } from "next/headers";
-import { audit } from "@/lib/audit";
+import {
+  writeChannelAccess,
+  writeChannelDenied,
+} from "@/lib/channel-audit";
 
 /** Lightweight authenticated channel ping (post-bind). */
 export async function GET(
-  _request: Request,
+  request: Request,
   context: { params: Promise<{ channel: string }> },
 ) {
   const { channel } = await context.params;
@@ -26,15 +29,14 @@ export async function GET(
       barrierValue: jar.get(AUTH_BARRIER_COOKIE)?.value,
     });
 
-    await audit.write({
-      event: "auth.channel_access",
+    await writeChannelAccess({
+      request,
+      channel,
+      route: "ping",
+      phase: "post-auth",
       actorUserId: access.blended.sub,
-      metadata: {
-        phase: "post-auth",
-        route: "ping",
-        channelId: channel,
-        deviceId: access.device.did,
-      },
+      deviceId: access.device.did,
+      handshakeId: access.blended.hid,
     });
 
     return NextResponse.json({
@@ -45,10 +47,17 @@ export async function GET(
       userId: access.blended.sub,
     });
   } catch (error) {
-    await audit.write({
-      event: "auth.channel_denied",
-      metadata: { phase: "post-auth", route: "ping", channelId: channel },
-    });
+    try {
+      await writeChannelDenied({
+        request,
+        channel,
+        route: "ping",
+        phase: "post-auth",
+        error,
+      });
+    } catch {
+      // ignore audit failure
+    }
     const pub = toPublicError(error);
     return NextResponse.json(
       { error: { code: pub.code, message: pub.message } },

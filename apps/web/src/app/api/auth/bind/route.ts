@@ -41,6 +41,8 @@ export async function POST(request: Request) {
       actorUserId: user.id,
       ip,
       userAgent: ua,
+      resourceType: "channel",
+      resourceId: bound.channelId,
       metadata: {
         deviceId: bound.deviceId,
         channelId: bound.channelId,
@@ -55,6 +57,8 @@ export async function POST(request: Request) {
       actorUserId: user.id,
       ip,
       userAgent: ua,
+      resourceType: "channel",
+      resourceId: bound.channelId,
       metadata: {
         phase: "post-auth",
         channelId: bound.channelId,

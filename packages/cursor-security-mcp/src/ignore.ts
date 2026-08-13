@@ -51,7 +51,16 @@ export async function loadIgnoreRules(
 
 export function isPathIgnored(relativePath: string, rules: IgnoreRules): boolean {
   const normalized = relativePath.replace(/\\/g, "/");
-  return rules.pathGlobs.some((g) => globToRegExp(g).test(normalized));
+  const base = normalized.split("/").pop() ?? normalized;
+  return rules.pathGlobs.some((g) => {
+    if (globToRegExp(g).test(normalized)) return true;
+    if (!g.includes("/") && globToRegExp(g).test(base)) return true;
+    if (g.endsWith("/**")) {
+      const prefix = g.slice(0, -3);
+      return normalized === prefix || normalized.startsWith(`${prefix}/`);
+    }
+    return false;
+  });
 }
 
 export function filterFindings(

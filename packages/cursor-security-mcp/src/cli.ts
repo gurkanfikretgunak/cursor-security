@@ -56,9 +56,13 @@ async function main() {
   else body = formatReportMarkdown(report);
 
   if (out) {
-    await fs.mkdir(path.dirname(path.resolve(out)), { recursive: true });
-    await fs.writeFile(out, body, "utf8");
-    console.error(`Wrote ${out}`);
+    const target = path.resolve(out);
+    const dir = path.dirname(target);
+    if (dir && dir !== target) {
+      await fs.mkdir(dir, { recursive: true });
+    }
+    await fs.writeFile(target, body, "utf8");
+    console.error(`Wrote ${target}`);
   } else {
     console.log(body);
   }

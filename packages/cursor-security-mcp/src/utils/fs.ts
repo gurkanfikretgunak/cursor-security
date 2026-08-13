@@ -52,6 +52,13 @@ const TEXT_EXTENSIONS = new Set([
   ".svelte",
 ]);
 
+const LOCKFILE_NAMES = new Set([
+  "package-lock.json",
+  "pnpm-lock.yaml",
+  "yarn.lock",
+  "npm-shrinkwrap.json",
+]);
+
 const SPECIAL_FILENAMES = new Set([
   "dockerfile",
   "docker-compose.yml",
@@ -132,16 +139,21 @@ export async function walkSourceFiles(
 
       const lower = entry.name.toLowerCase();
       const ext = path.extname(lower);
+      const isLockfile = LOCKFILE_NAMES.has(lower);
       const isText =
         TEXT_EXTENSIONS.has(ext) ||
         SPECIAL_FILENAMES.has(lower) ||
         lower.startsWith(".env");
 
-      if (!isText) continue;
+      if (!isText && !isLockfile) continue;
 
       try {
-        const content = await fs.readFile(absolutePath, "utf8");
-        if (content.length > 500_000) continue;
+        // Lockfiles are presence markers only — scanning their contents
+        // produces false positives (e.g. SQL snippets inside resolved packages).
+        const content = isLockfile
+          ? ""
+          : await fs.readFile(absolutePath, "utf8");
+        if (!isLockfile && content.length > 500_000) continue;
         results.push({
           absolutePath,
           relativePath: path.relative(root, absolutePath),

@@ -41,7 +41,14 @@ export function scanAgent(files: SourceFile[]): Finding[] {
     }
   }
 
-  for (const file of files) {
+  const configFiles = files.filter((f) =>
+    /\.(json|ya?ml|toml)$/i.test(f.relativePath) ||
+    /(^|\/)(mcp\.json|agents?\.(md|json|ya?ml)|claude_desktop_config\.json)$/i.test(
+      f.relativePath.replace(/\\/g, "/")
+    )
+  );
+
+  for (const file of configFiles) {
     const { content, relativePath } = file;
     let match: RegExpExecArray | null;
 
@@ -95,8 +102,8 @@ export function scanAgent(files: SourceFile[]): Finding[] {
   const hasSandboxSignal = files.some((f) =>
     /sandbox|firecracker|gvisor|seccomp|egress.?allowlist|networkPolicy/i.test(f.content)
   );
-  const hasAgentSurface = files.some((f) =>
-    /mcpServers|Agent|allowedTools|tool_choice/i.test(f.content)
+  const hasAgentSurface = configFiles.some((f) =>
+    /mcpServers|allowedTools|tool_choice/i.test(f.content)
   );
 
   if (hasAgentSurface && !hasSandboxSignal) {

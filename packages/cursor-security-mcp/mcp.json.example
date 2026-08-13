@@ -1,0 +1,10 @@
+{
+  "mcpServers": {
+    "cursor-security": {
+      "command": "node",
+      "args": [
+        "/ABSOLUTE/PATH/TO/cursor-security/packages/cursor-security-mcp/dist/index.js"
+      ]
+    }
+  }
+}

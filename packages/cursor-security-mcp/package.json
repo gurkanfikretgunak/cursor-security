@@ -1,0 +1,44 @@
+{
+  "name": "@cursor-security/mcp",
+  "version": "1.0.0",
+  "private": true,
+  "description": "MCP server that audits project repositories for security posture across client, backend, secrets, dependencies, and configuration.",
+  "type": "module",
+  "bin": {
+    "cursor-security-mcp": "./dist/index.js"
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist",
+    "README.md",
+    "mcp.json.example"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/index.js",
+    "dev": "tsx src/index.ts",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "security:self-check": "npm run build && node --input-type=module -e \"import { runDomainScan } from './dist/scanners/index.js'; const r = await runDomainScan('full', process.cwd()); console.log(r.grade, r.overallScore, r.findings.length)\""
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "keywords": [
+    "mcp",
+    "security",
+    "audit",
+    "cursor",
+    "model-context-protocol"
+  ],
+  "license": "MIT",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.12.1",
+    "zod": "^3.25.67"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.30",
+    "tsx": "^4.19.4",
+    "typescript": "^5.8.3"
+  }
+}

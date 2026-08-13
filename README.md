@@ -33,10 +33,12 @@
 
 <p align="center">
   <a href="#table-of-contents"><strong>TOC</strong></a> ·
+  <a href="#security-mcp-for-cursor"><strong>Security MCP</strong></a> ·
   <a href="#wiki--agentic-ai-security"><strong>Wiki</strong></a> ·
   <a href="./MANIFEST.md"><strong>Manifest</strong></a> ·
   <a href="./compliance/README.md"><strong>ISMS</strong></a> ·
   <a href="./packages/masterfabric-next-sec/README.md"><strong>Library</strong></a> ·
+  <a href="./packages/cursor-security-mcp/README.md"><strong>MCP</strong></a> ·
   <a href="#sources--further-reading"><strong>Sources</strong></a> ·
   <a href="https://cursor.com/brand"><strong>Brand</strong></a>
 </p>
@@ -53,14 +55,62 @@
 
 ---
 
+## Security MCP for Cursor
+
+### Ship code with a security co-pilot in the IDE
+
+**[`@cursor-security/mcp`](./packages/cursor-security-mcp)** turns your Cursor session into a living security review board. Point the agent at any repository and it scores posture across **secrets, client-side, backend/API, dependencies, config/infra, and project hygiene** — then returns file-level findings the same chat can fix.
+
+> **One install. Six scanners. Nine MCP tools. Full-stack visibility.**  
+> Not a vague checklist — concrete recommendations for React/Next clients, Node/Python APIs, Docker, CI, and supply chain.
+
+| Domain | What it checks |
+| --- | --- |
+| **Secrets** | Hardcoded API keys, JWTs, private keys, committed `.env` files |
+| **Client** | XSS sinks, token-in-`localStorage`, CSP gaps, insecure HTTP |
+| **Backend** | SQLi/command patterns, CORS `*`, auth gaps, cookie flags, rate limits |
+| **Dependencies** | Lockfiles, risky packages, floating versions, dangerous npm scripts |
+| **Config** | `.gitignore`, Docker root user, CI security jobs, headers, `.npmrc` tokens |
+| **Project** | README/license/tests, Node engines, TypeScript strictness |
+
+**Ask the agent:**
+
+- “Run a full security scan on this repo and summarize the top risks.”
+- “Check client-side auth token storage and CSP.”
+- “Audit backend routes for missing auth and open CORS.”
+- “What’s our security score, and what should we fix first?”
+
+```bash
+npm install
+npm run build -w @cursor-security/mcp
+```
+
+Cursor → **Settings → MCP** (see [`mcp.json.example`](./packages/cursor-security-mcp/mcp.json.example)):
+
+```json
+{
+  "mcpServers": {
+    "cursor-security": {
+      "command": "node",
+      "args": ["/ABSOLUTE/PATH/TO/cursor-security/packages/cursor-security-mcp/dist/index.js"]
+    }
+  }
+}
+```
+
+Full tool list and architecture: [`packages/cursor-security-mcp/README.md`](./packages/cursor-security-mcp/README.md).
+
+---
+
 ## Table of contents
 
 1. [Why this exists](#why-this-exists)
 2. [Who this is for](#who-this-is-for)
-3. [Repository structure](#repository-structure)
-4. [Quick start](#quick-start)
-5. [Product surface (routes)](#product-surface-routes)
-6. [Wiki — Agentic AI Security](#wiki--agentic-ai-security)
+3. [Security MCP for Cursor](#security-mcp-for-cursor)
+4. [Repository structure](#repository-structure)
+5. [Quick start](#quick-start)
+6. [Product surface (routes)](#product-surface-routes)
+7. [Wiki — Agentic AI Security](#wiki--agentic-ai-security)
    - [Core argument](#core-argument)
    - [Ten principles (deep)](#ten-principles-deep)
    - [Threat catalog](#threat-catalog)
@@ -71,13 +121,13 @@
    - [Compliance / ISMS map](#compliance--isms-map)
    - [Framework mapping](#framework-mapping)
    - [Learning paths](#learning-paths)
-7. [Scripts](#scripts)
-8. [Environment variables](#environment-variables)
-9. [Brand & naming](#brand--naming)
-10. [Sources & further reading](#sources--further-reading)
-11. [Author](#author)
-12. [Contributing / reuse](#contributing--reuse)
-13. [Disclaimer](#disclaimer)
+8. [Scripts](#scripts)
+9. [Environment variables](#environment-variables)
+10. [Brand & naming](#brand--naming)
+11. [Sources & further reading](#sources--further-reading)
+12. [Author](#author)
+13. [Contributing / reuse](#contributing--reuse)
+14. [Disclaimer](#disclaimer)
 
 ---
 
@@ -99,6 +149,7 @@ Most AI security conversation still centers on the **model prompt**: jailbreaks,
 - a public [manifest](./MANIFEST.md) and guidance site
 - a working Next.js control surface (`/login` → `/app`)
 - a reusable library: [`masterfabric-next-sec`](./packages/masterfabric-next-sec)
+- a Cursor **[Security MCP](#security-mcp-for-cursor)** for multi-domain repo audits: [`@cursor-security/mcp`](./packages/cursor-security-mcp)
 - an [ISMS pack](./compliance/README.md) mapped to [SOC 2](https://www.aicpa-cima.com/topic/audit-assurance/audit-and-assurance-greater-than-soc-2), [ISO 27001](https://www.iso.org/standard/27001), and [OWASP ASVS L2](https://owasp.org/www-project-application-security-verification-standard/)
 
 Fork it for education, internal playbooks, product hardening, or auditor walkthroughs.
@@ -109,7 +160,7 @@ Fork it for education, internal playbooks, product hardening, or auditor walkthr
 
 | Audience | How to use this repo |
 | --- | --- |
-| Engineers building agents / MCP tools | Steal the principles + wire AuthZ outside the prompt |
+| Engineers building agents / MCP tools | Steal the principles + wire AuthZ outside the prompt; run [`@cursor-security/mcp`](./packages/cursor-security-mcp) in Cursor |
 | Security / AppSec | Map ASVS rows in [`control-matrix.md`](./compliance/control-matrix.md) to real code |
 | Founders / Cursor Ambassadors | Public narrative + brand-correct “Developed with Cursor” surface |
 | Compliance / GRC | Start at [`compliance/README.md`](./compliance/README.md) → scope → matrix → evidence |
@@ -127,6 +178,7 @@ cursor-security/
 │   ├── public/brand/cursor/          # Official Cursor SVG marks
 │   └── public/MANIFEST.md            # Served at /MANIFEST.md
 ├── packages/masterfabric-next-sec/   # Auth.js + Zod + CSP + rate-limit + audit
+├── packages/cursor-security-mcp/     # Cursor MCP: multi-domain repo security audits
 ├── compliance/                       # ISMS: policies, SoA, matrix, evidence
 ├── MANIFEST.md                       # Public agentic AI security manifesto
 ├── docker-compose.yml                # Local Postgres 16
@@ -137,6 +189,7 @@ cursor-security/
 | --- | --- | --- |
 | [`apps/web`](./apps/web) | Product UI + Server Actions + Auth.js wiring | [Product surface](#product-surface-routes) |
 | [`packages/masterfabric-next-sec`](./packages/masterfabric-next-sec) | Reusable security primitives | [Library map](#library-map-masterfabric-next-sec) |
+| [`packages/cursor-security-mcp`](./packages/cursor-security-mcp) | MCP server for repo security scoring in Cursor | [Security MCP](#security-mcp-for-cursor) |
 | [`compliance/`](./compliance/) | Management system + auditor spine | [Compliance map](#compliance--isms-map) |
 | [`MANIFEST.md`](./MANIFEST.md) | Ten principles + threats + minimum controls | [Wiki](#wiki--agentic-ai-security) |
 | [`apps/web/public/brand/cursor/`](./apps/web/public/brand/cursor/) | Official logos from Ambassador Studio | [Brand](#brand--naming) |
@@ -411,8 +464,9 @@ Index: [`compliance/README.md`](./compliance/README.md).
 | Command | Description |
 | --- | --- |
 | `npm run dev` | Next.js dev server (`@cursor-security/web`) |
-| `npm run build` | Build `masterfabric-next-sec` + web |
-| `npm run typecheck` | Typecheck package + web |
+| `npm run build` | Build `masterfabric-next-sec` + MCP + web |
+| `npm run typecheck` | Typecheck packages + web |
+| `npm run mcp` | Start `@cursor-security/mcp` (stdio) |
 | `npm run lint` | ESLint web |
 | `npm run db:generate` | Drizzle generate |
 | `npm run db:migrate` | Apply migrations |

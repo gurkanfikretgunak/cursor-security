@@ -1,36 +1,40 @@
+"use client";
+
+import { useEffect, useState } from "react";
+
 type BackendStatusResponse = {
   ok?: boolean;
   service?: string;
   database?: string;
+  backend?: string;
 };
 
-export async function BackendStatus() {
-  const base = process.env.BACKEND_URL || process.env.NEXT_PUBLIC_BACKEND_URL;
-  if (!base) {
-    return (
-      <p className="mt-6 font-mono text-xs text-muted">
-        Backend: not configured
-      </p>
-    );
-  }
+export function BackendStatus() {
+  const [label, setLabel] = useState("connecting…");
 
-  try {
-    const response = await fetch(`${base.replace(/\/$/, "")}/api/v1/status`, {
-      next: { revalidate: 30 },
-    });
-    const body = (await response.json()) as BackendStatusResponse;
-    const database = body.database ?? "unknown";
-    const label = response.ok && body.ok ? "up" : "degraded";
-    return (
-      <p className="mt-6 font-mono text-xs text-muted">
-        Backend {label}
-        <span className="text-line"> · </span>
-        db {database}
-      </p>
-    );
-  } catch {
-    return (
-      <p className="mt-6 font-mono text-xs text-muted">Backend unreachable</p>
-    );
-  }
+  useEffect(() => {
+    let cancelled = false;
+    const run = async () => {
+      try {
+        const response = await fetch("/api/backend-status", {
+          cache: "no-store",
+        });
+        const body = (await response.json()) as BackendStatusResponse;
+        if (cancelled) return;
+        if (body.ok) {
+          setLabel(`Backend up · db ${body.database ?? "unknown"}`);
+          return;
+        }
+        setLabel("Backend waking or unreachable");
+      } catch {
+        if (!cancelled) setLabel("Backend unreachable");
+      }
+    };
+    void run();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  return <p className="mt-6 font-mono text-xs text-muted">{label}</p>;
 }

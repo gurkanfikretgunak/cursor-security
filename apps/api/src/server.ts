@@ -2,8 +2,6 @@ import http from "node:http";
 import postgres from "postgres";
 
 const port = Number(process.env.PORT ?? 10000);
-const frontendOrigin =
-  process.env.FRONTEND_ORIGIN ?? "https://gurkan-cursor-security.vercel.app";
 const databaseUrl = process.env.DATABASE_URL;
 const useSsl =
   process.env.DATABASE_SSL === "false"
@@ -11,8 +9,28 @@ const useSsl =
     : process.env.NODE_ENV === "production" ||
       /render\.com|sslmode=require/i.test(databaseUrl ?? "");
 
-function applyCors(res: http.ServerResponse) {
-  res.setHeader("Access-Control-Allow-Origin", frontendOrigin);
+function isAllowedOrigin(origin: string | undefined): origin is string {
+  if (!origin) return false;
+  try {
+    const { hostname, protocol } = new URL(origin);
+    if (protocol !== "https:" && protocol !== "http:") return false;
+    if (origin === process.env.FRONTEND_ORIGIN) return true;
+    return (
+      hostname === "gurkan-cursor-security.vercel.app" ||
+      hostname === "gurkan-cursor-security-masterfabric.vercel.app" ||
+      (hostname.startsWith("gurkan-cursor-security-") &&
+        hostname.endsWith(".vercel.app"))
+    );
+  } catch {
+    return false;
+  }
+}
+
+function applyCors(req: http.IncomingMessage, res: http.ServerResponse) {
+  const origin = req.headers.origin;
+  if (isAllowedOrigin(origin)) {
+    res.setHeader("Access-Control-Allow-Origin", origin);
+  }
   res.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
   res.setHeader("Vary", "Origin");
@@ -41,7 +59,7 @@ async function databaseStatus(): Promise<"connected" | "disconnected" | "error">
 }
 
 const server = http.createServer((req, res) => {
-  applyCors(res);
+  applyCors(req, res);
   if (req.method === "OPTIONS") {
     res.writeHead(204);
     res.end();
@@ -57,11 +75,10 @@ const server = http.createServer((req, res) => {
 
   if (req.method === "GET" && url.pathname === "/api/v1/status") {
     void databaseStatus().then((database) => {
-      json(res, database === "connected" ? 200 : 503, {
-        ok: database === "connected",
+      json(res, 200, {
+        ok: true,
         service: "cursor-security-api",
         database,
-        frontend: frontendOrigin,
       });
     });
     return;

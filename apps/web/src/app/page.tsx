@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { BackendStatus } from "@/components/backend-status";
 import { CursorMark } from "@/components/cursor-mark";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
@@ -69,6 +70,7 @@ export default function Home() {
               MANIFEST.md
             </a>
           </div>
+          <BackendStatus />
         </section>
 
         <section className="mt-16 border-t border-line pt-12">

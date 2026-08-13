@@ -5,6 +5,12 @@ import * as schema from "./schema";
 const connectionString =
   process.env.DATABASE_URL ?? "postgres://postgres:postgres@localhost:5432/cursor_security";
 
+const useSsl =
+  process.env.DATABASE_SSL === "false"
+    ? false
+    : process.env.NODE_ENV === "production" ||
+      /render\.com|sslmode=require/i.test(connectionString);
+
 const globalForDb = globalThis as unknown as {
   pg?: ReturnType<typeof postgres>;
 };
@@ -14,6 +20,7 @@ const client =
   postgres(connectionString, {
     max: 10,
     prepare: false,
+    ssl: useSsl ? "require" : false,
   });
 
 if (process.env.NODE_ENV !== "production") {

@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { CursorMark } from "@/components/cursor-mark";
 
 type SiteFooterProps = {
@@ -25,15 +26,15 @@ export function SiteFooter({
             <span className="text-muted"> · Cursor Ambassador</span>
           </span>
           <span className="flex flex-wrap gap-x-3">
-            <a href="/security" className="hover:text-foreground">
+            <Link href="/security" className="hover:text-foreground">
               Security
-            </a>
-            <a href="/privacy" className="hover:text-foreground">
+            </Link>
+            <Link href="/privacy" className="hover:text-foreground">
               Privacy
-            </a>
-            <a href="/#sources" className="hover:text-foreground">
+            </Link>
+            <Link href="/#sources" className="hover:text-foreground">
               Sources
-            </a>
+            </Link>
             <a
               href="https://github.com/gurkanfikretgunak/cursor-security"
               target="_blank"

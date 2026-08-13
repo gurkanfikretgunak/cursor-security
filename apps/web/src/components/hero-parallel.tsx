@@ -1,12 +1,16 @@
+import Image from "next/image";
+
 export function HeroParallel() {
   return (
     <figure className="relative mt-10 overflow-hidden border border-line">
       <div className="relative">
-        <img
+        <Image
           src="/brand/hero-parallel.jpg"
           alt="Four parallel glass planes receding — identity, policy, audit, and containment as separate control surfaces"
           width={1600}
           height={900}
+          priority
+          sizes="(min-width: 768px) 768px, 100vw"
           className="block h-auto w-full"
         />
         <svg

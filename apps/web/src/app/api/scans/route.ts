@@ -8,6 +8,7 @@ import { db } from "@/db";
 import { securityScans } from "@/db/schema";
 import { audit } from "@/lib/audit";
 import { listUserOrgs } from "@/lib/orgs";
+import { hasRemoteDatabase, requireRemoteDatabase } from "@/lib/db-mode";
 
 const ingestSchema = z.object({
   report: z.object({
@@ -28,6 +29,9 @@ export async function GET(request: Request) {
   try {
     const session = await auth();
     const user = requireUser(session);
+    if (!hasRemoteDatabase()) {
+      return NextResponse.json({ count: 0, scans: [] });
+    }
     const limitRaw = Number(
       new URL(request.url).searchParams.get("limit") ?? "20",
     );
@@ -80,6 +84,7 @@ export async function POST(request: Request) {
   try {
     const session = await auth();
     const user = requireUser(session);
+    requireRemoteDatabase();
     const body = ingestSchema.parse(await request.json());
     const orgs = await listUserOrgs(user.id);
     const orgId = body.orgId ?? orgs[0]?.id ?? null;

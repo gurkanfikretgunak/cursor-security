@@ -258,9 +258,11 @@ export default async function AppHomePage() {
             {orgs.length === 0 ? (
               <div className="mt-3">
                 <p className="text-sm text-muted">
-                  No organization yet — create a tenant boundary.
+                  {hasRemoteDatabase()
+                    ? "No organization yet — create a tenant boundary."
+                    : "Organizations need a remote DATABASE_URL. Login and channel probes still work."}
                 </p>
-                <CreateOrgForm />
+                {hasRemoteDatabase() ? <CreateOrgForm /> : null}
               </div>
             ) : (
               <ul className="mt-3 space-y-2">

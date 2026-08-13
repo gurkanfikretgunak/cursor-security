@@ -11,6 +11,7 @@ import { memberships, organizations, users } from "@/db/schema";
 import { audit } from "@/lib/audit";
 import { listUserOrgs, requireOrgRole, slugify } from "@/lib/orgs";
 import { limiter } from "@/lib/rate-limit";
+import { requireRemoteDatabase } from "@/lib/db-mode";
 
 const CreateOrgSchema = z.object({
   name: z.string().trim().min(2).max(80),
@@ -27,6 +28,7 @@ export const createOrganization = actionHandler(
   async (input, ctx) => {
     const session = await auth();
     const user = requireUser(session);
+    requireRemoteDatabase();
 
     const limited = await limiter.check(
       `create-org:${user.id}:${ctx.ip ?? "unknown"}`,
@@ -81,6 +83,7 @@ export const createOrganization = actionHandler(
 export const inviteMember = actionHandler(InviteSchema, async (input, ctx) => {
   const session = await auth();
   const user = requireUser(session);
+  requireRemoteDatabase();
 
   await requireOrgRole(input.orgId, user.id, "admin");
 

@@ -85,7 +85,11 @@ export const { handlers, auth, signIn, signOut } = NextAuth(
         })
       : undefined,
     session: { strategy: remoteDb ? "database" : "jwt" },
-    providers: [magicLinkProvider(), testLoginProvider()],
+    // Email provider requires an Auth.js adapter. Without a remote DB we
+    // only expose credentials (AUTH_TEST_PASSWORD) + JWT sessions.
+    providers: remoteDb
+      ? [magicLinkProvider(), testLoginProvider()]
+      : [testLoginProvider()],
     callbacks: {
       session({ session, user, token }) {
         const id = user?.id ?? token?.sub;

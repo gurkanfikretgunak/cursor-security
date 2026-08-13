@@ -6,12 +6,20 @@ import { auth } from "@/auth";
 import { db } from "@/db";
 import { auditEvents } from "@/db/schema";
 import { listUserOrgs } from "@/lib/orgs";
+import { hasRemoteDatabase } from "@/lib/db-mode";
 import { describeAuditEvent } from "@/lib/security-report";
 
 export async function GET(request: Request) {
   try {
     const session = await auth();
     const user = requireUser(session);
+    if (!hasRemoteDatabase()) {
+      return NextResponse.json({
+        fetchedAt: new Date().toISOString(),
+        count: 0,
+        events: [],
+      });
+    }
     const limitRaw = Number(
       new URL(request.url).searchParams.get("limit") ?? "100",
     );

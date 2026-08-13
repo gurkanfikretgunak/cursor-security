@@ -6,6 +6,7 @@ import { auth } from "@/auth";
 import { db } from "@/db";
 import { securityScans } from "@/db/schema";
 import { listUserOrgs } from "@/lib/orgs";
+import { hasRemoteDatabase } from "@/lib/db-mode";
 import { ScanIngestForm } from "@/components/scan-ingest-form";
 
 export default async function ScansPage() {
@@ -17,7 +18,8 @@ export default async function ScansPage() {
     redirect("/login");
   }
 
-  const orgs = await listUserOrgs(user.id);
+  const persist = hasRemoteDatabase();
+  const orgs = persist ? await listUserOrgs(user.id) : [];
   const orgIds = orgs.map((o) => o.id);
   const filter =
     orgIds.length > 0
@@ -27,22 +29,24 @@ export default async function ScansPage() {
         )
       : eq(securityScans.actorUserId, user.id);
 
-  const scans = await db
-    .select({
-      id: securityScans.id,
-      projectLabel: securityScans.projectLabel,
-      overallScore: securityScans.overallScore,
-      grade: securityScans.grade,
-      summary: securityScans.summary,
-      findingCount: securityScans.findingCount,
-      source: securityScans.source,
-      createdAt: securityScans.createdAt,
-      report: securityScans.report,
-    })
-    .from(securityScans)
-    .where(filter)
-    .orderBy(desc(securityScans.createdAt))
-    .limit(30);
+  const scans = persist
+    ? await db
+        .select({
+          id: securityScans.id,
+          projectLabel: securityScans.projectLabel,
+          overallScore: securityScans.overallScore,
+          grade: securityScans.grade,
+          summary: securityScans.summary,
+          findingCount: securityScans.findingCount,
+          source: securityScans.source,
+          createdAt: securityScans.createdAt,
+          report: securityScans.report,
+        })
+        .from(securityScans)
+        .where(filter)
+        .orderBy(desc(securityScans.createdAt))
+        .limit(30)
+    : [];
 
   return (
     <div className="mx-auto w-full max-w-3xl flex-1 px-6 py-12">
@@ -64,6 +68,13 @@ export default async function ScansPage() {
         </Link>
       </p>
 
+      {!persist ? (
+        <p className="mt-6 border border-line bg-surface px-4 py-3 text-sm text-muted">
+          Scan history needs a remote DATABASE_URL. Auth still works; ingest is
+          disabled until Postgres is wired.
+        </p>
+      ) : null}
+
       <section className="mt-10 border border-line px-5 py-5">
         <h2 className="text-lg font-semibold">Ingest a report</h2>
         <p className="mt-2 text-[15px] leading-7 text-muted">
@@ -74,7 +85,11 @@ export default async function ScansPage() {
             npm run scan -w @cursor-security/mcp -- --format json
           </code>
         </p>
-        <ScanIngestForm />
+        {persist ? (
+          <ScanIngestForm />
+        ) : (
+          <p className="mt-3 text-sm text-muted">Ingest form is offline.</p>
+        )}
       </section>
 
       <section className="mt-12">

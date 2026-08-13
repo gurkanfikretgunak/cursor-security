@@ -8,34 +8,51 @@ import { db } from "@/db";
 import { securityScans } from "@/db/schema";
 import { audit } from "@/lib/audit";
 import { listUserOrgs } from "@/lib/orgs";
-import { hasRemoteDatabase, requireRemoteDatabase } from "@/lib/db-mode";
+import { hasRemoteDatabase } from "@/lib/db-mode";
+import { addLabScan, listLabScans } from "@/lib/lab-store";
+import { buildLabScanReport, compactFindings } from "@/lib/sample-scan";
 
-const ingestSchema = z.object({
-  report: z.object({
-    projectPath: z.string().optional(),
-    scannedAt: z.string().optional(),
-    overallScore: z.number().min(0).max(100),
-    grade: z.enum(["A", "B", "C", "D", "F"]),
-    summary: z.string().optional(),
-    findings: z.array(z.unknown()).optional(),
-    domains: z.array(z.unknown()).optional(),
-  }),
-  projectLabel: z.string().min(1).max(200).optional(),
-  source: z.enum(["mcp", "cli", "ui", "github-action"]).optional(),
-  orgId: z.string().uuid().optional(),
+const reportSchema = z.object({
+  projectPath: z.string().optional(),
+  scannedAt: z.string().optional(),
+  overallScore: z.number().min(0).max(100),
+  grade: z.enum(["A", "B", "C", "D", "F"]),
+  summary: z.string().optional(),
+  findings: z.array(z.unknown()).optional(),
+  domains: z.array(z.unknown()).optional(),
 });
+
+const ingestSchema = z
+  .object({
+    demo: z.boolean().optional(),
+    report: reportSchema.optional(),
+    projectLabel: z.string().min(1).max(200).optional(),
+    source: z.enum(["mcp", "cli", "ui", "github-action"]).optional(),
+    orgId: z.string().uuid().optional(),
+  })
+  .superRefine((data, ctx) => {
+    if (!data.demo && !data.report) {
+      ctx.addIssue({
+        code: "custom",
+        message: "Provide a report or run a lab scan.",
+        path: ["report"],
+      });
+    }
+  });
 
 export async function GET(request: Request) {
   try {
     const session = await auth();
     const user = requireUser(session);
-    if (!hasRemoteDatabase()) {
-      return NextResponse.json({ count: 0, scans: [] });
-    }
     const limitRaw = Number(
       new URL(request.url).searchParams.get("limit") ?? "20",
     );
     const limit = Math.min(50, Math.max(1, Number.isFinite(limitRaw) ? limitRaw : 20));
+
+    if (!hasRemoteDatabase()) {
+      const scans = (await listLabScans()).slice(0, limit);
+      return NextResponse.json({ count: scans.length, scans });
+    }
 
     const orgs = await listUserOrgs(user.id);
     const orgIds = orgs.map((o) => o.id);
@@ -84,7 +101,6 @@ export async function POST(request: Request) {
   try {
     const session = await auth();
     const user = requireUser(session);
-    requireRemoteDatabase();
     const body = ingestSchema.parse(await request.json());
     const orgs = await listUserOrgs(user.id);
     const orgId = body.orgId ?? orgs[0]?.id ?? null;
@@ -93,11 +109,52 @@ export async function POST(request: Request) {
       throw new AppError("FORBIDDEN", "Not a member of that organization.");
     }
 
-    const findings = body.report.findings ?? [];
+    const report = body.demo
+      ? buildLabScanReport(body.projectLabel || "cursor-security")
+      : body.report!;
+    const findings = report.findings ?? [];
     const projectLabel =
       body.projectLabel ||
-      body.report.projectPath?.split("/").filter(Boolean).slice(-1)[0] ||
+      report.projectPath?.split("/").filter(Boolean).slice(-1)[0] ||
       "workspace";
+    const source = body.demo ? "ui" : (body.source ?? "mcp");
+    const overallScore = Math.round(report.overallScore);
+    const summary = report.summary ?? "";
+    const compact = compactFindings(findings);
+
+    if (!hasRemoteDatabase()) {
+      const row = await addLabScan({
+        projectLabel,
+        overallScore,
+        grade: report.grade,
+        summary,
+        findingCount: findings.length,
+        source,
+        findings: compact,
+      });
+      await audit.write({
+        event: "security.scan.ingested",
+        actorUserId: user.id,
+        orgId,
+        resourceType: "security_scan",
+        resourceId: row.id,
+        metadata: {
+          grade: row.grade,
+          overallScore: row.overallScore,
+          findingCount: findings.length,
+          source,
+        },
+      });
+      return NextResponse.json(
+        {
+          id: row.id,
+          grade: row.grade,
+          overallScore: row.overallScore,
+          createdAt: row.createdAt,
+        },
+        { status: 201 },
+      );
+    }
 
     const [row] = await db
       .insert(securityScans)
@@ -105,12 +162,12 @@ export async function POST(request: Request) {
         orgId,
         actorUserId: user.id,
         projectLabel,
-        overallScore: Math.round(body.report.overallScore),
-        grade: body.report.grade,
-        summary: body.report.summary ?? "",
+        overallScore,
+        grade: report.grade,
+        summary,
         findingCount: findings.length,
-        source: body.source ?? "mcp",
-        report: body.report as Record<string, unknown>,
+        source,
+        report: report as Record<string, unknown>,
       })
       .returning({
         id: securityScans.id,
@@ -129,7 +186,7 @@ export async function POST(request: Request) {
         grade: row.grade,
         overallScore: row.overallScore,
         findingCount: findings.length,
-        source: body.source ?? "mcp",
+        source,
       },
     });
 

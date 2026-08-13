@@ -6,6 +6,7 @@ import type { OrgRole } from "masterfabric-next-sec/auth";
 import type { AuditRow } from "@/lib/security-report";
 
 const MAX_EVENTS = 60;
+const MAX_SCANS = 6;
 const MAX_AGE = 60 * 60 * 24 * 7;
 const als = new AsyncLocalStorage<{ state: LabState }>();
 
@@ -35,6 +36,32 @@ export type LabMember = {
   role: OrgRole;
 };
 
+export type LabScan = {
+  id: string;
+  projectLabel: string;
+  overallScore: number;
+  grade: "A" | "B" | "C" | "D" | "F";
+  summary: string;
+  findingCount: number;
+  source: string;
+  createdAt: string;
+  findings: Array<{ severity: string; title: string }>;
+};
+
+type CompactScan = {
+  i: string;
+  p: string;
+  s: number;
+  g: LabScan["grade"];
+  m: string;
+  n: number;
+  c: string;
+  t: number;
+  f: Array<{ v: string; t: string }>;
+};
+
+type ScanJar = { scans: CompactScan[] };
+
 type LabState = {
   ev: CompactEvent[];
   orgs: LabOrg[];
@@ -47,6 +74,22 @@ function cookieName(): string {
     : "cursor-security-lab";
 }
 
+function scanCookieName(): string {
+  return process.env.NODE_ENV === "production"
+    ? "__Host-cursor-security-scans"
+    : "cursor-security-scans";
+}
+
+function cookieOpts(maxAge: number) {
+  return {
+    httpOnly: true as const,
+    sameSite: "lax" as const,
+    path: "/",
+    secure: process.env.NODE_ENV === "production",
+    maxAge,
+  };
+}
+
 function secret(): string | null {
   return process.env.AUTH_SECRET || null;
 }
@@ -55,36 +98,39 @@ function empty(): LabState {
   return { ev: [], orgs: [], members: [] };
 }
 
-function encode(state: LabState, key: string): string {
-  const payload = Buffer.from(JSON.stringify(state), "utf8").toString(
+function encode(value: unknown, key: string): string {
+  const payload = Buffer.from(JSON.stringify(value), "utf8").toString(
     "base64url",
   );
   const sig = createHmac("sha256", key).update(payload).digest("base64url");
   return `${payload}.${sig}`;
 }
 
-function decode(raw: string | undefined, key: string): LabState {
-  if (!raw) return empty();
+function unsign(raw: string | undefined, key: string): unknown {
+  if (!raw) return null;
   const dot = raw.lastIndexOf(".");
-  if (dot <= 0) return empty();
+  if (dot <= 0) return null;
   const payload = raw.slice(0, dot);
   const sig = raw.slice(dot + 1);
   const expected = createHmac("sha256", key).update(payload).digest("base64url");
   const a = Buffer.from(sig);
   const b = Buffer.from(expected);
-  if (a.length !== b.length || !timingSafeEqual(a, b)) return empty();
+  if (a.length !== b.length || !timingSafeEqual(a, b)) return null;
   try {
-    const parsed = JSON.parse(
-      Buffer.from(payload, "base64url").toString("utf8"),
-    ) as LabState;
-    return {
-      ev: Array.isArray(parsed.ev) ? parsed.ev : [],
-      orgs: Array.isArray(parsed.orgs) ? parsed.orgs : [],
-      members: Array.isArray(parsed.members) ? parsed.members : [],
-    };
+    return JSON.parse(Buffer.from(payload, "base64url").toString("utf8"));
   } catch {
-    return empty();
+    return null;
   }
+}
+
+function decode(raw: string | undefined, key: string): LabState {
+  const parsed = unsign(raw, key) as LabState | null;
+  if (!parsed) return empty();
+  return {
+    ev: Array.isArray(parsed.ev) ? parsed.ev : [],
+    orgs: Array.isArray(parsed.orgs) ? parsed.orgs : [],
+    members: Array.isArray(parsed.members) ? parsed.members : [],
+  };
 }
 
 async function readFromCookie(): Promise<LabState> {
@@ -98,13 +144,7 @@ async function persist(state: LabState): Promise<void> {
   const key = secret();
   if (!key) return;
   const jar = await cookies();
-  jar.set(cookieName(), encode(state, key), {
-    httpOnly: true,
-    sameSite: "lax",
-    path: "/",
-    secure: process.env.NODE_ENV === "production",
-    maxAge: MAX_AGE,
-  });
+  jar.set(cookieName(), encode(state, key), cookieOpts(MAX_AGE));
 }
 
 async function withLabState<T>(fn: (state: LabState) => Promise<T> | T): Promise<T> {
@@ -235,13 +275,88 @@ export async function addLabMember(input: {
   });
 }
 
+function expandScan(row: CompactScan): LabScan {
+  const grades = ["A", "B", "C", "D", "F"] as const;
+  return {
+    id: row.i,
+    projectLabel: row.p || "workspace",
+    overallScore: row.s,
+    grade: grades.includes(row.g) ? row.g : "C",
+    summary: row.m ?? "",
+    findingCount: row.n ?? 0,
+    source: row.c || "ui",
+    createdAt: new Date(row.t).toISOString(),
+    findings: (Array.isArray(row.f) ? row.f : []).map((f) => ({
+      severity: f.v,
+      title: f.t,
+    })),
+  };
+}
+
+function emptyScans(): ScanJar {
+  return { scans: [] };
+}
+
+function decodeScans(raw: string | undefined, key: string): ScanJar {
+  const parsed = unsign(raw, key) as ScanJar | null;
+  if (!parsed || !Array.isArray(parsed.scans)) return emptyScans();
+  return { scans: parsed.scans };
+}
+
+async function readScanJar(): Promise<ScanJar> {
+  const key = secret();
+  if (!key) return emptyScans();
+  const jar = await cookies();
+  return decodeScans(jar.get(scanCookieName())?.value, key);
+}
+
+async function persistScans(state: ScanJar): Promise<void> {
+  const key = secret();
+  if (!key) return;
+  const jar = await cookies();
+  jar.set(scanCookieName(), encode(state, key), cookieOpts(MAX_AGE));
+}
+
+export async function listLabScans(): Promise<LabScan[]> {
+  return (await readScanJar()).scans.map(expandScan);
+}
+
+export async function addLabScan(input: {
+  projectLabel: string;
+  overallScore: number;
+  grade: LabScan["grade"];
+  summary: string;
+  findingCount: number;
+  source: string;
+  findings: Array<{ severity: string; title: string }>;
+}): Promise<LabScan> {
+  const key = secret();
+  if (!key) {
+    throw new Error("AUTH_SECRET is required to store lab scans.");
+  }
+  const state = await readScanJar();
+  const row: CompactScan = {
+    i: randomUUID(),
+    p: input.projectLabel.slice(0, 80),
+    s: input.overallScore,
+    g: input.grade,
+    m: input.summary.slice(0, 160),
+    n: input.findingCount,
+    c: input.source.slice(0, 24),
+    t: Date.now(),
+    f: input.findings.slice(0, 6).map((f) => ({
+      v: f.severity.slice(0, 12),
+      t: f.title.slice(0, 96),
+    })),
+  };
+  state.scans.unshift(row);
+  if (state.scans.length > MAX_SCANS) state.scans.length = MAX_SCANS;
+  await persistScans(state);
+  return expandScan(row);
+}
+
 export async function clearLabState(): Promise<void> {
   const jar = await cookies();
-  jar.set(cookieName(), "", {
-    httpOnly: true,
-    sameSite: "lax",
-    path: "/",
-    secure: process.env.NODE_ENV === "production",
-    maxAge: 0,
-  });
+  jar.set(cookieName(), "", cookieOpts(0));
+  jar.set(scanCookieName(), "", cookieOpts(0));
 }

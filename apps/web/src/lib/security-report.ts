@@ -215,7 +215,7 @@ export function describeAuditEvent(event: string): string {
     "auth.blended": "User JWT blended with barrier key",
     "auth.channel_access": "Private channel API authorized",
     "auth.channel_denied": "Private channel API denied",
-    "auth.login": "Signed in (magic link)",
+    "auth.login": "Signed in",
     "auth.logout": "Signed out",
     "auth.failure": "Authentication failed",
     "org.created": "Organization created",
@@ -225,7 +225,7 @@ export function describeAuditEvent(event: string): string {
     "rbac.denied": "Authorization denied",
     "admin.action": "Admin action",
     "data.export": "Data export",
-    "security.scan.ingested": "Repository security scan ingested",
+    "security.scan.ingested": "Repository scan saved",
   };
   return map[event] ?? event;
 }

@@ -18,6 +18,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             <Link href="/app" className="hover:text-foreground">
               X-ray
             </Link>
+            <Link href="/app/scans" className="hover:text-foreground">
+              Scans
+            </Link>
             <Link href="/" className="hover:text-foreground">
               Site
             </Link>

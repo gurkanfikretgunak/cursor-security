@@ -85,7 +85,11 @@ export const { handlers, auth, signIn, signOut } = NextAuth(
         })
       : undefined,
     session: { strategy: remoteDb ? "database" : "jwt" },
-    providers: [magicLinkProvider(), testLoginProvider()],
+    // Email provider requires an Auth.js adapter. Without a remote DB we
+    // only expose credentials (AUTH_TEST_PASSWORD) + JWT sessions.
+    providers: remoteDb
+      ? [magicLinkProvider(), testLoginProvider()]
+      : [testLoginProvider()],
     callbacks: {
       session({ session, user, token }) {
         const id = user?.id ?? token?.sub;
@@ -100,6 +104,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth(
         await audit.write({
           event: "auth.login",
           actorUserId: user.id,
+          resourceType: "session",
+          resourceId: user.email ?? user.id,
           metadata: { email: user.email ?? null },
         });
       },
@@ -111,6 +117,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth(
         await audit.write({
           event: "auth.logout",
           actorUserId: userId,
+          resourceType: "session",
+          resourceId: userId,
         });
       },
     },

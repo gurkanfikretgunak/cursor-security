@@ -5,8 +5,19 @@ import {
 } from "masterfabric-next-sec/auth";
 import { db } from "@/db";
 import { memberships, organizations } from "@/db/schema";
+import { hasRemoteDatabase } from "@/lib/db-mode";
+import { getLabMembership, listLabOrgs } from "@/lib/lab-store";
 
 export async function getMembership(orgId: string, userId: string) {
+  if (!hasRemoteDatabase()) {
+    const lab = await getLabMembership(orgId, userId);
+    if (!lab) return null;
+    return {
+      orgId: lab.orgId,
+      userId: lab.userId,
+      role: lab.role,
+    };
+  }
   const [row] = await db
     .select()
     .from(memberships)
@@ -31,6 +42,15 @@ export async function requireOrgRole(
 }
 
 export async function listUserOrgs(userId: string) {
+  if (!hasRemoteDatabase()) {
+    return (await listLabOrgs()).map((org) => ({
+      id: org.id,
+      name: org.name,
+      slug: org.slug,
+      role: org.role,
+      createdAt: new Date(org.createdAt),
+    }));
+  }
   return db
     .select({
       id: organizations.id,

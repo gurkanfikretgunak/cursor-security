@@ -11,6 +11,8 @@ import { memberships, organizations, users } from "@/db/schema";
 import { audit } from "@/lib/audit";
 import { listUserOrgs, requireOrgRole, slugify } from "@/lib/orgs";
 import { limiter } from "@/lib/rate-limit";
+import { hasRemoteDatabase } from "@/lib/db-mode";
+import { addLabMember, addLabOrganization } from "@/lib/lab-store";
 
 const CreateOrgSchema = z.object({
   name: z.string().trim().min(2).max(80),
@@ -34,6 +36,27 @@ export const createOrganization = actionHandler(
     );
     if (!limited.success) {
       throw new AppError("RATE_LIMITED", "Too many requests. Try again later.");
+    }
+
+    if (!hasRemoteDatabase()) {
+      const org = await addLabOrganization({
+        name: input.name,
+        slug: slugify(input.name) || "org",
+        userId: user.id,
+        email: user.email ?? null,
+        displayName: user.name ?? null,
+      });
+      await audit.write({
+        event: "org.created",
+        actorUserId: user.id,
+        orgId: org.id,
+        resourceType: "organization",
+        resourceId: org.id,
+        ip: ctx.ip,
+        userAgent: ctx.userAgent,
+        metadata: { name: org.name, slug: org.slug, store: "lab-cookie" },
+      });
+      return org;
     }
 
     const baseSlug = slugify(input.name) || "org";
@@ -83,6 +106,32 @@ export const inviteMember = actionHandler(InviteSchema, async (input, ctx) => {
   const user = requireUser(session);
 
   await requireOrgRole(input.orgId, user.id, "admin");
+
+  if (!hasRemoteDatabase()) {
+    const limitedLab = await limiter.check(
+      `invite:${input.orgId}:${user.id}`,
+      "sensitive",
+    );
+    if (!limitedLab.success) {
+      throw new AppError("RATE_LIMITED", "Too many invites. Try again later.");
+    }
+    const member = await addLabMember({
+      orgId: input.orgId,
+      email: input.email.toLowerCase(),
+      role: input.role,
+    });
+    await audit.write({
+      event: "org.member_added",
+      actorUserId: user.id,
+      orgId: input.orgId,
+      resourceType: "user",
+      resourceId: member.userId,
+      ip: ctx.ip,
+      userAgent: ctx.userAgent,
+      metadata: { email: member.email, role: member.role, store: "lab-cookie" },
+    });
+    return { userId: member.userId, email: member.email, role: member.role };
+  }
 
   const limited = await limiter.check(
     `invite:${input.orgId}:${user.id}`,

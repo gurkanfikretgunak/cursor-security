@@ -21,6 +21,8 @@ export async function POST(request: Request) {
       event: "auth.handshake",
       ip,
       userAgent: ua,
+      resourceType: "handshake",
+      resourceId: handshake.handshakeId,
       metadata: {
         handshakeId: handshake.handshakeId,
         expiresAt: handshake.expiresAt,
@@ -35,6 +37,8 @@ export async function POST(request: Request) {
         event: "auth.device",
         ip,
         userAgent: ua,
+        resourceType: "device",
+        resourceId: handshake.deviceId,
         metadata: {
           deviceId: handshake.deviceId,
           note: "Anonymous device JWT issued (HttpOnly)",
@@ -46,6 +50,8 @@ export async function POST(request: Request) {
       event: "auth.channel",
       ip,
       userAgent: ua,
+      resourceType: "channel",
+      resourceId: handshake.channelId,
       metadata: {
         phase: "pre-auth",
         channelId: handshake.channelId,

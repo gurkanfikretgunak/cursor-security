@@ -1,46 +1,33 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-
-export type LiveAuditEvent = {
-  id: string;
-  event: string;
-  label: string;
-  createdAt: string;
-  actorUserId: string | null;
-  orgId: string | null;
-  resourceType: string | null;
-  resourceId: string | null;
-  ip: string | null;
-  metadata: Record<string, unknown> | null;
-};
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { AuditEventList, type AuditListItem } from "@/components/audit-event-list";
+import { auditFamily, formatRelativeTime } from "@/lib/format";
 
 type FeedResponse = {
   fetchedAt: string;
   count: number;
-  events: LiveAuditEvent[];
+  events: AuditListItem[];
   error?: { message?: string };
 };
 
-const SPEED_OPTIONS = [
-  { label: "Off", seconds: 0 },
-  { label: "1s", seconds: 1 },
-  { label: "2s", seconds: 2 },
-  { label: "3s", seconds: 3 },
-  { label: "5s", seconds: 5 },
-  { label: "10s", seconds: 10 },
-  { label: "15s", seconds: 15 },
-  { label: "30s", seconds: 30 },
-] as const;
+type Filter = "all" | "auth" | "org" | "scan";
 
-const STORAGE_KEY = "cursor-security.auditRefreshSeconds";
+const FILTERS: Array<{ id: Filter; label: string }> = [
+  { id: "all", label: "All" },
+  { id: "auth", label: "Auth" },
+  { id: "org", label: "Org" },
+  { id: "scan", label: "Scan" },
+];
 
-function readStoredSeconds(): number {
-  if (typeof window === "undefined") return 5;
+const LIVE_SECONDS = 8;
+const STORAGE_KEY = "cursor-security.auditLive";
+
+function readLive(): boolean {
+  if (typeof window === "undefined") return true;
   const raw = localStorage.getItem(STORAGE_KEY);
-  const n = raw == null ? 5 : Number(raw);
-  if (!Number.isFinite(n) || n < 0) return 5;
-  return Math.min(60, Math.floor(n));
+  if (raw == null) return true;
+  return raw !== "0";
 }
 
 export function LiveAuditTimeline({
@@ -48,20 +35,13 @@ export function LiveAuditTimeline({
 }: {
   orgAuditHref?: string | null;
 }) {
-  const [seconds, setSeconds] = useState(() => readStoredSeconds());
-  const [custom, setCustom] = useState(() => String(readStoredSeconds() || 5));
-  const [events, setEvents] = useState<LiveAuditEvent[]>([]);
+  const [live, setLive] = useState(true);
+  const [filter, setFilter] = useState<Filter>("all");
+  const [events, setEvents] = useState<AuditListItem[]>([]);
   const [fetchedAt, setFetchedAt] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [tick, setTick] = useState(0);
-
-  const applySeconds = useCallback((value: number) => {
-    const next = Math.min(60, Math.max(0, Math.floor(value)));
-    setSeconds(next);
-    localStorage.setItem(STORAGE_KEY, String(next));
-    if (next > 0) setCustom(String(next));
-  }, []);
+  const [now, setNow] = useState(() => Date.now());
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -78,7 +58,7 @@ export function LiveAuditTimeline({
       setEvents(body.events);
       setFetchedAt(body.fetchedAt);
       setError(null);
-      setTick((t) => t + 1);
+      setNow(Date.now());
     } catch (err) {
       setError(err instanceof Error ? err.message : "Audit feed error.");
     } finally {
@@ -87,18 +67,45 @@ export function LiveAuditTimeline({
   }, []);
 
   useEffect(() => {
-    // Initial fetch for the live audit feed (external system sync).
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional mount fetch
+    // Restore live toggle and fetch the audit feed on mount.
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional mount sync
+    setLive(readLive());
     void load();
   }, [load]);
 
   useEffect(() => {
-    if (seconds <= 0) return;
+    if (!live) return;
     const id = window.setInterval(() => {
       void load();
-    }, seconds * 1000);
+    }, LIVE_SECONDS * 1000);
     return () => window.clearInterval(id);
-  }, [seconds, load]);
+  }, [live, load]);
+
+  useEffect(() => {
+    const id = window.setInterval(() => setNow(Date.now()), 15_000);
+    return () => window.clearInterval(id);
+  }, []);
+
+  const visible = useMemo(() => {
+    if (filter === "all") return events;
+    return events.filter((e) => auditFamily(e.event) === filter);
+  }, [events, filter]);
+
+  const counts = useMemo(() => {
+    const next = { all: events.length, auth: 0, org: 0, scan: 0 };
+    for (const e of events) {
+      const family = auditFamily(e.event);
+      if (family === "auth" || family === "org" || family === "scan") {
+        next[family] += 1;
+      }
+    }
+    return next;
+  }, [events]);
+
+  function toggleLive(next: boolean) {
+    setLive(next);
+    localStorage.setItem(STORAGE_KEY, next ? "1" : "0");
+  }
 
   return (
     <section className="mt-12 border-t border-line pt-10">
@@ -106,7 +113,7 @@ export function LiveAuditTimeline({
         <div>
           <h2 className="text-xl font-semibold">Full audit timeline</h2>
           <p className="mt-2 text-[16px] leading-7 text-muted">
-            Live feed (last 100). Refresh speed is configurable in seconds.
+            Newest first. Human labels, not raw JSON.
           </p>
         </div>
         {orgAuditHref ? (
@@ -116,118 +123,73 @@ export function LiveAuditTimeline({
         ) : null}
       </div>
 
-      <div className="mt-6 border border-line bg-surface px-4 py-4">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <p className="font-mono text-xs uppercase tracking-[0.14em] text-accent">
-            Audit speed
-          </p>
-          <p className="font-mono text-[11px] text-muted">
-            {seconds === 0
-              ? "auto-refresh off"
-              : `every ${seconds}s · tick #${tick}`}
-            {loading ? " · fetching…" : ""}
-          </p>
-        </div>
-
-        <div className="mt-3 flex flex-wrap gap-2">
-          {SPEED_OPTIONS.map((opt) => (
-            <button
-              key={opt.label}
-              type="button"
-              onClick={() => applySeconds(opt.seconds)}
-              className="h-8 border px-3 font-mono text-xs"
-              style={{
-                borderColor:
-                  seconds === opt.seconds ? "var(--foreground)" : "var(--line)",
-                background:
-                  seconds === opt.seconds ? "var(--foreground)" : "white",
-                color: seconds === opt.seconds ? "white" : "var(--foreground)",
-              }}
-            >
-              {opt.label}
-            </button>
-          ))}
-        </div>
-
-        <form
-          className="mt-3 flex flex-wrap items-center gap-2"
-          onSubmit={(e) => {
-            e.preventDefault();
-            const n = Number(custom);
-            if (!Number.isFinite(n)) return;
-            applySeconds(n);
-          }}
-        >
-          <label className="font-mono text-xs text-muted">
-            Custom seconds (1–60)
-            <input
-              type="number"
-              min={1}
-              max={60}
-              value={custom}
-              onChange={(e) => setCustom(e.target.value)}
-              className="ml-2 w-20 border border-line bg-white px-2 py-1 text-foreground outline-none focus:border-foreground"
-            />
-          </label>
+      <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
+        <p className="font-mono text-[11px] text-muted">
+          {events.length} event{events.length === 1 ? "" : "s"}
+          {fetchedAt ? ` · updated ${formatRelativeTime(fetchedAt, now)}` : ""}
+          {loading ? " · fetching" : ""}
+        </p>
+        <div className="flex gap-2">
           <button
-            type="submit"
-            className="h-8 border border-line px-3 font-mono text-xs hover:border-foreground"
+            type="button"
+            onClick={() => toggleLive(!live)}
+            className="h-8 border px-3 font-mono text-xs"
+            style={{
+              borderColor: live ? "var(--foreground)" : "var(--line)",
+              background: live ? "var(--foreground)" : "white",
+              color: live ? "white" : "var(--foreground)",
+            }}
           >
-            Apply
+            {live ? "Live" : "Paused"}
           </button>
           <button
             type="button"
             onClick={() => void load()}
-            className="h-8 bg-foreground px-3 font-mono text-xs text-white"
+            className="h-8 border border-line px-3 font-mono text-xs hover:border-foreground"
           >
-            Refresh now
+            Refresh
           </button>
-        </form>
-
-        {fetchedAt ? (
-          <p className="mt-3 font-mono text-[11px] text-muted">
-            last fetch {fetchedAt}
-          </p>
-        ) : null}
-        {error ? (
-          <p className="mt-2 text-sm text-red-700">{error}</p>
-        ) : null}
+        </div>
       </div>
 
-      <ul className="mt-8 space-y-3">
+      {error ? <p className="mt-3 text-sm text-red-700">{error}</p> : null}
+
+      <div className="mt-5 flex flex-wrap gap-2">
+        {FILTERS.map((opt) => {
+          const active = filter === opt.id;
+          const count = counts[opt.id];
+          return (
+            <button
+              key={opt.id}
+              type="button"
+              onClick={() => setFilter(opt.id)}
+              className="h-8 border px-3 font-mono text-xs"
+              style={{
+                borderColor: active ? "var(--foreground)" : "var(--line)",
+                background: active ? "var(--foreground)" : "white",
+                color: active ? "white" : "var(--foreground)",
+              }}
+            >
+              {opt.label}
+              {count > 0 ? ` ${count}` : ""}
+            </button>
+          );
+        })}
+      </div>
+
+      <div className="mt-6">
         {events.length === 0 ? (
-          <li className="text-sm text-muted">No records.</li>
+          <p className="text-sm text-muted">
+            No records yet. Sign in, create an org, or run a repo scan.
+          </p>
+        ) : visible.length === 0 ? (
+          <p className="text-sm text-muted">
+            No {filter} events in this feed.
+          </p>
         ) : (
-          events.map((e, index) => (
-            <li key={e.id} className="border border-line px-4 py-3">
-              <div className="flex flex-wrap items-baseline justify-between gap-2">
-                <p className="font-mono text-xs text-muted">
-                  #{String(events.length - index).padStart(3, "0")}
-                </p>
-                <p className="font-mono text-[11px] text-muted">
-                  {e.createdAt}
-                </p>
-              </div>
-              <p className="mt-1 font-mono text-sm text-accent">{e.event}</p>
-              <p className="mt-1 text-sm text-foreground">{e.label}</p>
-              <pre className="mt-2 overflow-x-auto font-mono text-[11px] leading-5 text-muted">
-                {JSON.stringify(
-                  {
-                    actorUserId: e.actorUserId,
-                    orgId: e.orgId,
-                    resourceType: e.resourceType,
-                    resourceId: e.resourceId,
-                    ip: e.ip,
-                    metadata: e.metadata,
-                  },
-                  null,
-                  2,
-                )}
-              </pre>
-            </li>
-          ))
+          <AuditEventList events={visible} now={now} />
         )}
-      </ul>
+      </div>
     </section>
   );
 }

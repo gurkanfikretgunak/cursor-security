@@ -8,14 +8,17 @@ import {
 import { AppError, toPublicError } from "masterfabric-next-sec/errors";
 import { cookies } from "next/headers";
 import { auth } from "@/auth";
-import { audit } from "@/lib/audit";
+import {
+  writeChannelAccess,
+  writeChannelDenied,
+} from "@/lib/channel-audit";
 
 /**
  * Post-auth private channel — requires device JWT + blended JWT (+ barrier match)
  * and path channel equal to the blended token channel.
  */
 export async function GET(
-  _request: Request,
+  request: Request,
   context: { params: Promise<{ channel: string }> },
 ) {
   const { channel } = await context.params;
@@ -41,16 +44,14 @@ export async function GET(
       throw new AppError("FORBIDDEN", "Blended token user mismatch.");
     }
 
-    await audit.write({
-      event: "auth.channel_access",
+    await writeChannelAccess({
+      request,
+      channel,
+      route: "me",
+      phase: "post-auth",
       actorUserId: session.user.id,
-      metadata: {
-        phase: "post-auth",
-        route: "me",
-        channelId: channel,
-        deviceId: access.device.did,
-        handshakeId: access.blended.hid,
-      },
+      deviceId: access.device.did,
+      handshakeId: access.blended.hid,
     });
 
     return NextResponse.json({
@@ -65,14 +66,12 @@ export async function GET(
     });
   } catch (error) {
     try {
-      await audit.write({
-        event: "auth.channel_denied",
-        metadata: {
-          phase: "post-auth",
-          route: "me",
-          channelId: channel,
-          reason: error instanceof Error ? error.message : "unknown",
-        },
+      await writeChannelDenied({
+        request,
+        channel,
+        route: "me",
+        phase: "post-auth",
+        error,
       });
     } catch {
       // ignore audit failure

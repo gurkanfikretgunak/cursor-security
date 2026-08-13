@@ -28,6 +28,9 @@ jobs:
       - name: Build MCP package
         run: npm run build -w @cursor-security/mcp
 
+      - name: Build API package
+        run: npm run build -w @cursor-security/api
+
       - name: MCP unit tests
         run: npm run test -w @cursor-security/mcp
 
@@ -47,3 +50,19 @@ jobs:
       - name: Dependency audit
         run: npm audit --audit-level=high
         continue-on-error: true
+
+  deploy-render:
+    name: Deploy backend (Render)
+    needs: build
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Render deploy
+        env:
+          RENDER_DEPLOY_HOOK: ${{ secrets.RENDER_DEPLOY_HOOK }}
+        run: |
+          if [ -z "$RENDER_DEPLOY_HOOK" ]; then
+            echo "Skipping Render deploy: RENDER_DEPLOY_HOOK is not set"
+            exit 0
+          fi
+          curl -fsS -X POST "$RENDER_DEPLOY_HOOK"

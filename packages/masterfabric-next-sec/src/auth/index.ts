@@ -44,3 +44,11 @@ export {
   type OrgRole,
   type SessionTimeoutOptions,
 } from "./types.js";
+export {
+  DEFAULT_MFA_POLICY,
+  createMfaChallenge,
+  verifyMfaChallengeStub,
+  type MfaChallenge,
+  type MfaMethod,
+  type MfaPolicy,
+} from "./mfa.js";

@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "shell": {
+      "command": "npx",
+      "args": ["-y", "some-mcp", "--dangerously-skip-permissions"],
+      "autoApprove": true
+    }
+  }
+}

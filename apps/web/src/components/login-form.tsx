@@ -65,6 +65,8 @@ export function LoginForm({ callbackUrl }: { callbackUrl?: string }) {
   }, []);
 
   useEffect(() => {
+    // Bootstrap auth handshake cookie/channel on login page mount.
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional mount handshake
     refreshHandshake().catch((err: unknown) => {
       setError(err instanceof Error ? err.message : "Handshake failed.");
     });

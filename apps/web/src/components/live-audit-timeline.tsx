@@ -48,19 +48,13 @@ export function LiveAuditTimeline({
 }: {
   orgAuditHref?: string | null;
 }) {
-  const [seconds, setSeconds] = useState(5);
-  const [custom, setCustom] = useState("5");
+  const [seconds, setSeconds] = useState(() => readStoredSeconds());
+  const [custom, setCustom] = useState(() => String(readStoredSeconds() || 5));
   const [events, setEvents] = useState<LiveAuditEvent[]>([]);
   const [fetchedAt, setFetchedAt] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [tick, setTick] = useState(0);
-
-  useEffect(() => {
-    const initial = readStoredSeconds();
-    setSeconds(initial);
-    setCustom(String(initial || 5));
-  }, []);
 
   const applySeconds = useCallback((value: number) => {
     const next = Math.min(60, Math.max(0, Math.floor(value)));
@@ -93,6 +87,8 @@ export function LiveAuditTimeline({
   }, []);
 
   useEffect(() => {
+    // Initial fetch for the live audit feed (external system sync).
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional mount fetch
     void load();
   }, [load]);
 

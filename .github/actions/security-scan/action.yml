@@ -1,0 +1,40 @@
+name: Cursor Security Scan
+description: Run @cursor-security/mcp CLI and optionally emit SARIF
+inputs:
+  project-path:
+    description: Path to scan
+    required: false
+    default: .
+  fail-on:
+    description: Fail if findings at or above this severity
+    required: false
+    default: high
+  format:
+    description: markdown | json | sarif
+    required: false
+    default: sarif
+  output:
+    description: Output file path
+    required: false
+    default: security-results.sarif
+  include-osv:
+    description: Include npm audit signals
+    required: false
+    default: "false"
+runs:
+  using: composite
+  steps:
+    - name: Build MCP
+      shell: bash
+      run: npm run build -w @cursor-security/mcp
+    - name: Scan
+      shell: bash
+      run: |
+        EXTRA=""
+        if [ "${{ inputs.include-osv }}" = "true" ]; then EXTRA="--osv"; fi
+        node packages/cursor-security-mcp/dist/cli.js \
+          --format "${{ inputs.format }}" \
+          --out "${{ inputs.output }}" \
+          --fail-on "${{ inputs.fail-on }}" \
+          $EXTRA \
+          "${{ inputs.project-path }}"

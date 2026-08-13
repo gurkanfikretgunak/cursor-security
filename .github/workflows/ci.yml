@@ -22,6 +22,12 @@ jobs:
       - name: Build security package
         run: npm run build -w masterfabric-next-sec
 
+      - name: Build MCP package
+        run: npm run build -w @cursor-security/mcp
+
+      - name: MCP unit tests
+        run: npm run test -w @cursor-security/mcp
+
       - name: Typecheck
         run: npm run typecheck
 
@@ -37,4 +43,3 @@ jobs:
 
       - name: Dependency audit
         run: npm audit --audit-level=high
-        continue-on-error: true

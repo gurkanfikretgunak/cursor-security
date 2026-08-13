@@ -1,11 +1,12 @@
 {
   "name": "@cursor-security/mcp",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "private": true,
-  "description": "MCP server that audits project repositories for security posture across client, backend, secrets, dependencies, and configuration.",
+  "description": "MCP server + CLI that audits project repositories for security posture across client, backend, secrets, dependencies, config, and agent trust.",
   "type": "module",
   "bin": {
-    "cursor-security-mcp": "./dist/index.js"
+    "cursor-security-mcp": "./dist/index.js",
+    "cursor-security-scan": "./dist/cli.js"
   },
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -18,8 +19,10 @@
     "build": "tsc -p tsconfig.json",
     "start": "node dist/index.js",
     "dev": "tsx src/index.ts",
+    "scan": "tsx src/cli.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "security:self-check": "npm run build && node --input-type=module -e \"import { runDomainScan } from './dist/scanners/index.js'; const r = await runDomainScan('full', process.cwd()); console.log(r.grade, r.overallScore, r.findings.length)\""
+    "test": "npm run build && node --import tsx --test test/**/*.test.ts",
+    "security:self-check": "npm run build && node --input-type=module -e \"import { runDomainScan } from './dist/scanners/index.js'; const r = await runDomainScan('full', { projectPath: process.cwd() }); console.log(r.grade, r.overallScore, r.findings.length)\""
   },
   "engines": {
     "node": ">=20"
@@ -29,6 +32,7 @@
     "security",
     "audit",
     "cursor",
+    "sarif",
     "model-context-protocol"
   ],
   "license": "MIT",

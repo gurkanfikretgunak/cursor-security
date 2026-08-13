@@ -225,6 +225,7 @@ export function describeAuditEvent(event: string): string {
     "rbac.denied": "Authorization denied",
     "admin.action": "Admin action",
     "data.export": "Data export",
+    "security.scan.ingested": "Repository security scan ingested",
   };
   return map[event] ?? event;
 }

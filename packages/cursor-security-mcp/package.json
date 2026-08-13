@@ -21,7 +21,7 @@
     "dev": "tsx src/index.ts",
     "scan": "tsx src/cli.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "npm run build && node --import tsx --test test/**/*.test.ts",
+    "test": "npm run build && node --import tsx --test ./test/scanners.test.ts",
     "security:self-check": "npm run build && node --input-type=module -e \"import { runDomainScan } from './dist/scanners/index.js'; const r = await runDomainScan('full', { projectPath: process.cwd() }); console.log(r.grade, r.overallScore, r.findings.length)\""
   },
   "engines": {

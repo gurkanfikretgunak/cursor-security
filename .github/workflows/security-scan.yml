@@ -6,13 +6,14 @@ on:
     branches: [main, master]
   workflow_dispatch:
 
+permissions:
+  contents: read
+  security-events: write
+  pull-requests: write
+
 jobs:
   scan:
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      security-events: write
-      pull-requests: write
     steps:
       - uses: actions/checkout@v4
 
@@ -36,7 +37,7 @@ jobs:
             .
 
       - name: Upload SARIF
-        if: always()
+        if: always() && hashFiles('security-results.sarif') != ''
         uses: github/codeql-action/upload-sarif@v3
         with:
           sarif_file: security-results.sarif

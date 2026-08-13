@@ -11,12 +11,22 @@ const BACKEND_HINT =
 
 export function scanBackend(files: SourceFile[]): Finding[] {
   const findings: Finding[] = [];
-  const backendFiles = files.filter(
-    (f) =>
+  const backendFiles = files.filter((f) => {
+    const name = f.relativePath.replace(/\\/g, "/").split("/").pop()?.toLowerCase() ?? "";
+    if (
+      name === "package-lock.json" ||
+      name === "pnpm-lock.yaml" ||
+      name === "yarn.lock" ||
+      name.endsWith(".md")
+    ) {
+      return false;
+    }
+    return (
       BACKEND_HINT.test(f.relativePath) ||
       /\.(py|go|php|rb|java|kt)$/i.test(f.relativePath) ||
       /(express|fastify|hono|koa|nestjs|flask|django|fastapi)/i.test(f.content)
-  );
+    );
+  });
 
   for (const file of backendFiles) {
     const { content, relativePath } = file;

@@ -4,7 +4,7 @@ import { fileURLToPath } from "node:url";
 import { describe, it } from "node:test";
 import { runDomainScan } from "../src/scanners/index.js";
 import { toSarif } from "../src/sarif.js";
-import { filterFindings, loadIgnoreRules } from "../src/ignore.js";
+import { filterFindings, isPathIgnored, loadIgnoreRules } from "../src/ignore.js";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const fixture = path.join(here, "../fixtures/risky-app");
@@ -42,5 +42,14 @@ describe("cursor-security scanners", () => {
     const { kept, suppressed } = filterFindings(report.findings, rules);
     assert.ok(suppressed > 0);
     assert.ok(kept.length < report.findings.length);
+  });
+
+  it("matches directory /** ignore globs", () => {
+    const rules = {
+      pathGlobs: ["fixtures/**"],
+      findingIds: new Set<string>(),
+      ruleIds: new Set<string>(),
+    };
+    assert.equal(isPathIgnored("fixtures/risky-app/src/server.js", rules), true);
   });
 });

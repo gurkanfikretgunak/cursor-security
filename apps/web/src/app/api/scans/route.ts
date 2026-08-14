@@ -9,6 +9,7 @@ import { securityScans } from "@/db/schema";
 import { audit } from "@/lib/audit";
 import { listUserOrgs } from "@/lib/orgs";
 import { hasRemoteDatabase } from "@/lib/db-mode";
+import { goRequest } from "@/lib/go-backend";
 import { addLabScan, listLabScans } from "@/lib/lab-store";
 import { buildLabScanReport, compactFindings } from "@/lib/sample-scan";
 
@@ -48,6 +49,14 @@ export async function GET(request: Request) {
       new URL(request.url).searchParams.get("limit") ?? "20",
     );
     const limit = Math.min(50, Math.max(1, Number.isFinite(limitRaw) ? limitRaw : 20));
+
+    const remote = await goRequest<{
+      count: number;
+      scans: unknown[];
+    }>(user, `/api/v1/scans?limit=${limit}`);
+    if (remote) {
+      return NextResponse.json(remote);
+    }
 
     if (!hasRemoteDatabase()) {
       const scans = (await listLabScans()).slice(0, limit);
@@ -121,6 +130,42 @@ export async function POST(request: Request) {
     const overallScore = Math.round(report.overallScore);
     const summary = report.summary ?? "";
     const compact = compactFindings(findings);
+
+    const remoteScan = await goRequest<{
+      id: string;
+      grade: string;
+      overallScore: number;
+      createdAt: string;
+    }>(user, "/api/v1/scans", {
+      method: "POST",
+      body: JSON.stringify({
+        orgId: orgId ?? undefined,
+        projectLabel,
+        overallScore,
+        grade: report.grade,
+        summary,
+        findingCount: findings.length,
+        source,
+        report: report as Record<string, unknown>,
+      }),
+    });
+    if (remoteScan) {
+      await audit.write({
+        event: "security.scan.ingested",
+        actorUserId: user.id,
+        orgId,
+        resourceType: "security_scan",
+        resourceId: remoteScan.id,
+        metadata: {
+          grade: remoteScan.grade,
+          overallScore: remoteScan.overallScore,
+          findingCount: findings.length,
+          source,
+          store: "go-api",
+        },
+      });
+      return NextResponse.json(remoteScan, { status: 201 });
+    }
 
     if (!hasRemoteDatabase()) {
       const row = await addLabScan({

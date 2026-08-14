@@ -6,7 +6,8 @@ import { requireUser } from "masterfabric-next-sec/auth";
 import { auth } from "@/auth";
 import { db } from "@/db";
 import { auditEvents, memberships, users } from "@/db/schema";
-import { listUserOrgs } from "@/lib/orgs";
+import { listOrgMembers, listUserOrgs } from "@/lib/orgs";
+import { goRequest } from "@/lib/go-backend";
 import {
   buildSecurityReport,
   type AuditRow,
@@ -16,7 +17,7 @@ import { ChannelSessionPanel } from "@/components/channel-session-panel";
 import { CreateOrgForm } from "@/components/create-org-form";
 import { InviteMemberForm } from "@/components/invite-member-form";
 import { LiveAuditTimeline } from "@/components/live-audit-timeline";
-import { hasRemoteDatabase } from "@/lib/db-mode";
+import { hasDurableStore, hasRemoteDatabase } from "@/lib/db-mode";
 import { listLabMembers, readLabEvents } from "@/lib/lab-store";
 
 export default async function AppHomePage() {
@@ -28,7 +29,7 @@ export default async function AppHomePage() {
     redirect("/login");
   }
 
-  const orgs = await listUserOrgs(user.id);
+  const orgs = await listUserOrgs(user);
   const primaryOrg = orgs[0];
 
   let members: Array<{
@@ -42,27 +43,40 @@ export default async function AppHomePage() {
     ? or(eq(auditEvents.actorUserId, user.id), eq(auditEvents.orgId, primaryOrg.id))
     : eq(auditEvents.actorUserId, user.id);
 
-  const events: AuditRow[] = hasRemoteDatabase()
-    ? await db
-        .select({
-          id: auditEvents.id,
-          event: auditEvents.event,
-          createdAt: auditEvents.createdAt,
-          actorUserId: auditEvents.actorUserId,
-          orgId: auditEvents.orgId,
-          resourceType: auditEvents.resourceType,
-          resourceId: auditEvents.resourceId,
-          ip: auditEvents.ip,
-          userAgent: auditEvents.userAgent,
-          metadata: auditEvents.metadata,
-        })
-        .from(auditEvents)
-        .where(orgFilter)
-        .orderBy(desc(auditEvents.createdAt))
-        .limit(100)
-    : await readLabEvents();
+  const remoteEvents = await goRequest<{
+    events: Array<AuditRow & { createdAt: string }>;
+  }>(user, "/api/v1/audit?limit=100");
+  const events: AuditRow[] = remoteEvents
+    ? remoteEvents.events.map((e) => ({
+        ...e,
+        createdAt: new Date(e.createdAt),
+      }))
+    : hasRemoteDatabase()
+      ? await db
+          .select({
+            id: auditEvents.id,
+            event: auditEvents.event,
+            createdAt: auditEvents.createdAt,
+            actorUserId: auditEvents.actorUserId,
+            orgId: auditEvents.orgId,
+            resourceType: auditEvents.resourceType,
+            resourceId: auditEvents.resourceId,
+            ip: auditEvents.ip,
+            userAgent: auditEvents.userAgent,
+            metadata: auditEvents.metadata,
+          })
+          .from(auditEvents)
+          .where(orgFilter)
+          .orderBy(desc(auditEvents.createdAt))
+          .limit(100)
+      : await readLabEvents();
 
-  if (primaryOrg && hasRemoteDatabase()) {
+  const remoteMembers = primaryOrg
+    ? await listOrgMembers(primaryOrg.id, user)
+    : null;
+  if (remoteMembers) {
+    members = remoteMembers;
+  } else if (primaryOrg && hasRemoteDatabase()) {
     members = await db
       .select({
         userId: memberships.userId,
@@ -169,9 +183,9 @@ export default async function AppHomePage() {
           controls.
         </p>
         <p className="mt-3 font-mono text-[11px] leading-5 text-muted">
-          {hasRemoteDatabase()
-            ? "Evidence is read from Postgres audit_events."
-            : "Evidence is a signed HttpOnly lab cookie until DATABASE_URL is connected. Create an org and invite a member to raise this grade to A."}
+          {hasDurableStore()
+            ? "Evidence is read from the Go API / Postgres audit_events."
+            : "Evidence is a signed HttpOnly lab cookie until the Go API or DATABASE_URL is connected. Create an org and invite a member to raise this grade to A."}
         </p>
       </section>
 

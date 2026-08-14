@@ -1,0 +1,11 @@
+{
+  "name": "@cursor-security/api",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node scripts/build-go.mjs",
+    "start": "node scripts/start-go.mjs",
+    "typecheck": "node -e \"process.exit(0)\""
+  }
+}

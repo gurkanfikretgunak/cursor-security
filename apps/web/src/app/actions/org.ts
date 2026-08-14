@@ -12,6 +12,7 @@ import { audit } from "@/lib/audit";
 import { listUserOrgs, requireOrgRole, slugify } from "@/lib/orgs";
 import { limiter } from "@/lib/rate-limit";
 import { hasRemoteDatabase } from "@/lib/db-mode";
+import { goRequest } from "@/lib/go-backend";
 import { addLabMember, addLabOrganization } from "@/lib/lab-store";
 
 const CreateOrgSchema = z.object({
@@ -36,6 +37,29 @@ export const createOrganization = actionHandler(
     );
     if (!limited.success) {
       throw new AppError("RATE_LIMITED", "Too many requests. Try again later.");
+    }
+
+    const remote = await goRequest<{
+      id: string;
+      name: string;
+      slug: string;
+      createdAt: string;
+    }>(user, "/api/v1/orgs", {
+      method: "POST",
+      body: JSON.stringify({ name: input.name }),
+    });
+    if (remote) {
+      await audit.write({
+        event: "org.created",
+        actorUserId: user.id,
+        orgId: remote.id,
+        resourceType: "organization",
+        resourceId: remote.id,
+        ip: ctx.ip,
+        userAgent: ctx.userAgent,
+        metadata: { name: remote.name, slug: remote.slug, store: "go-api" },
+      });
+      return remote;
     }
 
     if (!hasRemoteDatabase()) {
@@ -105,7 +129,33 @@ export const inviteMember = actionHandler(InviteSchema, async (input, ctx) => {
   const session = await auth();
   const user = requireUser(session);
 
-  await requireOrgRole(input.orgId, user.id, "admin");
+  await requireOrgRole(input.orgId, user, "admin");
+
+  const remoteMember = await goRequest<{
+    userId: string;
+    email: string | null;
+    role: "admin" | "member";
+  }>(user, `/api/v1/orgs/${input.orgId}/members`, {
+    method: "POST",
+    body: JSON.stringify({ email: input.email.toLowerCase(), role: input.role }),
+  });
+  if (remoteMember) {
+    await audit.write({
+      event: "org.member_added",
+      actorUserId: user.id,
+      orgId: input.orgId,
+      resourceType: "user",
+      resourceId: remoteMember.userId,
+      ip: ctx.ip,
+      userAgent: ctx.userAgent,
+      metadata: {
+        email: remoteMember.email,
+        role: remoteMember.role,
+        store: "go-api",
+      },
+    });
+    return remoteMember;
+  }
 
   if (!hasRemoteDatabase()) {
     const limitedLab = await limiter.check(
@@ -183,5 +233,5 @@ export const inviteMember = actionHandler(InviteSchema, async (input, ctx) => {
 export async function getMyOrganizations() {
   const session = await auth();
   const user = requireUser(session);
-  return listUserOrgs(user.id);
+  return listUserOrgs(user);
 }

@@ -5,8 +5,9 @@ import { requireUser } from "masterfabric-next-sec/auth";
 import { auth } from "@/auth";
 import { db } from "@/db";
 import { auditEvents, organizations } from "@/db/schema";
-import { requireOrgRole } from "@/lib/orgs";
+import { listUserOrgs, requireOrgRole } from "@/lib/orgs";
 import { hasRemoteDatabase } from "@/lib/db-mode";
+import { goRequest } from "@/lib/go-backend";
 import { listLabOrgs, readLabEvents } from "@/lib/lab-store";
 import { describeAuditEvent } from "@/lib/security-report";
 import { AuditEventList, type AuditListItem } from "@/components/audit-event-list";
@@ -55,9 +56,55 @@ export default async function OrgAuditPage({
   }
 
   try {
-    await requireOrgRole(orgId, user.id, "admin");
+    await requireOrgRole(orgId, user, "admin");
   } catch {
     redirect("/app");
+  }
+
+  const remote = await goRequest<{
+    events: Array<{
+      id: string;
+      event: string;
+      createdAt: string;
+      actorUserId?: string | null;
+      orgId?: string | null;
+      resourceType?: string | null;
+      resourceId?: string | null;
+      ip?: string | null;
+      userAgent?: string | null;
+      metadata?: Record<string, unknown> | null;
+    }>;
+  }>(user, `/api/v1/audit?orgId=${orgId}&limit=100`);
+  if (remote) {
+    const orgs = await listUserOrgs(user);
+    const org = orgs.find((item) => item.id === orgId);
+    if (!org) notFound();
+    return (
+      <div className="mx-auto w-full max-w-3xl flex-1 px-6 py-12">
+        <p className="font-mono text-xs text-accent">AUDIT · ADMIN+</p>
+        <h1 className="mt-3 text-3xl font-semibold tracking-tight">
+          {org.name} audit log
+        </h1>
+        <p className="mt-2 text-muted">
+          Append-only events for this tenant. Newest first.
+        </p>
+        <p className="mt-4">
+          <Link href="/app" className="text-sm underline">
+            ← Back to app
+          </Link>
+        </p>
+        <div className="mt-8">
+          <AuditEventList
+            events={toItems(
+              remote.events.map((e) => ({
+                ...e,
+                createdAt: new Date(e.createdAt),
+              })),
+            )}
+          />
+        </div>
+      </div>
+    );
   }
 
   if (!hasRemoteDatabase()) {

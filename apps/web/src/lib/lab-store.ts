@@ -366,6 +366,14 @@ export async function listLabScans(): Promise<LabScan[]> {
   return (await readScanJar()).scans.map(expandScan);
 }
 
+export async function removeLabScan(scanId: string): Promise<boolean> {
+  const state = await readScanJar();
+  const next = state.scans.filter((row) => row.i !== scanId);
+  if (next.length === state.scans.length) return false;
+  await persistScans({ scans: next });
+  return true;
+}
+
 export async function addLabScan(input: {
   projectLabel: string;
   overallScore: number;

@@ -5,13 +5,14 @@ import { requireUser } from "masterfabric-next-sec/auth";
 import { auth } from "@/auth";
 import { db } from "@/db";
 import { securityScans } from "@/db/schema";
-import { listUserOrgs } from "@/lib/orgs";
+import { canAdminister, listUserOrgs } from "@/lib/orgs";
 import { hasDurableStore, hasRemoteDatabase } from "@/lib/db-mode";
 import { goRequest } from "@/lib/go-backend";
 import { listLabScans } from "@/lib/lab-store";
 import { compactFindings } from "@/lib/sample-scan";
 import { formatRelativeTime } from "@/lib/format";
 import { ScanIngestForm } from "@/components/scan-ingest-form";
+import { ScanRemoveButton } from "@/components/scan-remove-button";
 
 type ScanCard = {
   id: string;
@@ -41,6 +42,8 @@ export default async function ScansPage() {
   }
 
   const persist = hasDurableStore();
+  const orgs = await listUserOrgs(user);
+  const canRemove = orgs.some((org) => canAdminister(org.role));
   const remote = await goRequest<{
     scans: Array<{
       id: string;
@@ -53,7 +56,6 @@ export default async function ScansPage() {
       createdAt: string;
     }>;
   }>(user, "/api/v1/scans?limit=30");
-  const orgs = persist ? await listUserOrgs(user) : [];
   const orgIds = orgs.map((o) => o.id);
   const filter =
     orgIds.length > 0
@@ -176,7 +178,7 @@ export default async function ScansPage() {
           <ul className="mt-6 space-y-3">
             {scans.map((scan) => (
               <li key={scan.id} className="border border-line px-4 py-4">
-                <div className="flex flex-wrap items-baseline justify-between gap-3">
+                <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>
                     <p className="font-medium">{scan.projectLabel}</p>
                     <p className="mt-1 font-mono text-xs text-muted">
@@ -184,12 +186,15 @@ export default async function ScansPage() {
                       {scan.findingCount} findings
                     </p>
                   </div>
-                  <p className="font-mono text-2xl font-semibold text-accent">
-                    {scan.grade}{" "}
-                    <span className="text-base font-normal text-muted">
-                      {scan.overallScore}/100
-                    </span>
-                  </p>
+                  <div className="flex items-start gap-3">
+                    <p className="font-mono text-2xl font-semibold text-accent">
+                      {scan.grade}{" "}
+                      <span className="text-base font-normal text-muted">
+                        {scan.overallScore}/100
+                      </span>
+                    </p>
+                    <ScanRemoveButton scanId={scan.id} canRemove={canRemove} />
+                  </div>
                 </div>
                 {scan.summary ? (
                   <p className="mt-3 text-[15px] leading-7 text-muted">

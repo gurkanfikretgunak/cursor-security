@@ -226,6 +226,7 @@ export function describeAuditEvent(event: string): string {
     "admin.action": "Admin action",
     "data.export": "Data export",
     "security.scan.ingested": "Repository scan saved",
+    "security.scan.removed": "Repository scan removed",
   };
   return map[event] ?? event;
 }

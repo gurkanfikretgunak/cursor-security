@@ -6,6 +6,9 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/go-chi/chi/v5"
+	"github.com/jackc/pgx/v5"
+
 	"github.com/gurkanfikretgunak/cursor-security/apps/api/internal/infrastructure/persistence/postgres"
 	"github.com/gurkanfikretgunak/cursor-security/apps/api/internal/shared/middleware"
 	"github.com/gurkanfikretgunak/cursor-security/apps/api/internal/shared/response"
@@ -100,6 +103,65 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	response.JSON(w, http.StatusCreated, scan)
+}
+
+func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
+	userID, ok := h.user(w, r)
+	if !ok {
+		return
+	}
+	scanID := strings.TrimSpace(chi.URLParam(r, "scanID"))
+	if scanID == "" {
+		response.JSON(w, http.StatusBadRequest, map[string]string{"error": "invalid_scan"})
+		return
+	}
+	scan, err := h.store.GetScan(r.Context(), scanID)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			response.JSON(w, http.StatusNotFound, map[string]string{"error": "not_found"})
+			return
+		}
+		response.JSON(w, http.StatusInternalServerError, map[string]string{"error": "lookup_failed"})
+		return
+	}
+	allowed, err := h.canAdmin(r, userID, scan.OrgID)
+	if err != nil {
+		response.JSON(w, http.StatusInternalServerError, map[string]string{"error": "authz_failed"})
+		return
+	}
+	if !allowed {
+		response.JSON(w, http.StatusForbidden, map[string]string{"error": "forbidden"})
+		return
+	}
+	if err := h.store.DeleteScan(r.Context(), scanID); err != nil {
+		if err == pgx.ErrNoRows {
+			response.JSON(w, http.StatusNotFound, map[string]string{"error": "not_found"})
+			return
+		}
+		response.JSON(w, http.StatusInternalServerError, map[string]string{"error": "delete_failed"})
+		return
+	}
+	response.JSON(w, http.StatusOK, map[string]any{"removed": true})
+}
+
+func (h *Handler) canAdmin(r *http.Request, userID string, orgID *string) (bool, error) {
+	if orgID != nil && strings.TrimSpace(*orgID) != "" {
+		role, ok, err := h.store.Membership(r.Context(), *orgID, userID)
+		if err != nil || !ok {
+			return false, err
+		}
+		return role == "admin" || role == "owner", nil
+	}
+	orgs, err := h.store.ListOrgs(r.Context(), userID)
+	if err != nil {
+		return false, err
+	}
+	for _, org := range orgs {
+		if org.Role == "admin" || org.Role == "owner" {
+			return true, nil
+		}
+	}
+	return false, nil
 }
 
 func (h *Handler) user(w http.ResponseWriter, r *http.Request) (string, bool) {

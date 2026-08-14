@@ -49,7 +49,11 @@ export async function goRequest<T>(
         error?: string;
       };
       throw new AppError(
-        response.status === 403 ? "FORBIDDEN" : "INTERNAL",
+        response.status === 403
+          ? "FORBIDDEN"
+          : response.status === 404
+            ? "NOT_FOUND"
+            : "INTERNAL",
         body.error ?? "Go backend request failed",
         { status: response.status },
       );

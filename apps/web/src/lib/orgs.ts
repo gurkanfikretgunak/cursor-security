@@ -1,8 +1,10 @@
 import { and, eq } from "drizzle-orm";
 import {
   assertOrgMember,
+  roleAtLeast,
   type OrgRole,
 } from "masterfabric-next-sec/auth";
+import { AppError } from "masterfabric-next-sec/errors";
 import { db } from "@/db";
 import { memberships, organizations } from "@/db/schema";
 import { hasRemoteDatabase } from "@/lib/db-mode";
@@ -114,6 +116,20 @@ export async function listOrgMembers(orgId: string, user: Actor) {
   }>(actor, `/api/v1/orgs/${orgId}/members`);
   if (remote) return remote.members;
   return null;
+}
+
+export function canAdminister(role: OrgRole | null | undefined): boolean {
+  return Boolean(role && roleAtLeast(role, "admin"));
+}
+
+export async function requireScanAdmin(user: Actor): Promise<void> {
+  const orgs = await listUserOrgs(user);
+  if (!orgs.some((org) => canAdminister(org.role))) {
+    throw new AppError(
+      "FORBIDDEN",
+      "Only organization admins can remove scans.",
+    );
+  }
 }
 
 export function slugify(input: string): string {

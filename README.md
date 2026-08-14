@@ -18,6 +18,7 @@
   <img src="https://img.shields.io/badge/Next.js-16-000000?style=flat-square&logo=nextdotjs&logoColor=white" alt="Next.js 16" />
   <img src="https://img.shields.io/badge/TypeScript-5-3178C6?style=flat-square&logo=typescript&logoColor=white" alt="TypeScript" />
   <img src="https://img.shields.io/badge/Auth.js-v5-black?style=flat-square&logo=auth0&logoColor=white" alt="Auth.js" />
+  <img src="https://img.shields.io/badge/Go-1.23-00ADD8?style=flat-square&logo=go&logoColor=white" alt="Go 1.23" />
   <img src="https://img.shields.io/badge/Postgres-16-4169E1?style=flat-square&logo=postgresql&logoColor=white" alt="Postgres 16" />
   <img src="https://img.shields.io/badge/Drizzle-ORM-C5F74F?style=flat-square&logo=drizzle&logoColor=black" alt="Drizzle ORM" />
 </p>
@@ -175,6 +176,7 @@ Fork it for education, internal playbooks, product hardening, or auditor walkthr
 
 ```text
 cursor-security/
+├── apps/api/                         # Go API (Chi + pgx, Render)
 ├── apps/web/                         # Next.js product (marketing + /app)
 │   ├── src/app/                      # Routes: /, /security, /privacy, /login, /app
 │   ├── src/components/               # SiteHeader, SiteFooter, CursorMark, forms
@@ -190,6 +192,7 @@ cursor-security/
 
 | Path | Role | Deep dive |
 | --- | --- | --- |
+| [`apps/api`](./apps/api) | Go health/status API on Render (`masterfabric-go` layout) | [`apps/api/README.md`](./apps/api/README.md) |
 | [`apps/web`](./apps/web) | Product UI + Server Actions + Auth.js wiring | [Product surface](#product-surface-routes) |
 | [`packages/masterfabric-next-sec`](./packages/masterfabric-next-sec) | Reusable security primitives | [Library map](#library-map-masterfabric-next-sec) |
 | [`packages/cursor-security-mcp`](./packages/cursor-security-mcp) | MCP server for repo security scoring in Cursor | [Security MCP](#security-mcp-for-cursor) |

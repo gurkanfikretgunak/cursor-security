@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "workspaces": [
-    "apps/*",
+    "apps/web",
     "packages/*"
   ],
   "scripts": {
@@ -11,7 +11,7 @@
     "build": "npm run build -w masterfabric-next-sec && npm run build -w @cursor-security/mcp && npm run build -w @cursor-security/web",
     "start": "npm run start -w @cursor-security/web",
     "lint": "npm run lint -w @cursor-security/web",
-    "typecheck": "npm run typecheck -w masterfabric-next-sec && npm run typecheck -w @cursor-security/mcp && npm run typecheck -w @cursor-security/web && npm run typecheck -w @cursor-security/api",
+    "typecheck": "npm run typecheck -w masterfabric-next-sec && npm run typecheck -w @cursor-security/mcp && npm run typecheck -w @cursor-security/web",
     "test": "npm run test -w @cursor-security/mcp",
     "mcp": "npm run start -w @cursor-security/mcp",
     "mcp:dev": "npm run dev -w @cursor-security/mcp",

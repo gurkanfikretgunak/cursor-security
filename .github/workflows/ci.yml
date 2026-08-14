@@ -28,8 +28,18 @@ jobs:
       - name: Build MCP package
         run: npm run build -w @cursor-security/mcp
 
-      - name: Build API package
-        run: npm run build -w @cursor-security/api
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.23"
+          cache-dependency-path: apps/api/go.sum
+
+      - name: Test Go API
+        working-directory: apps/api
+        run: go test ./...
+
+      - name: Build Go API
+        working-directory: apps/api
+        run: go build -o /tmp/cursor-security-api ./cmd/server
 
       - name: MCP unit tests
         run: npm run test -w @cursor-security/mcp

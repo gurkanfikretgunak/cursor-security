@@ -9,14 +9,15 @@ databases:
 services:
   - type: web
     name: cursor-security-api
-    runtime: node
+    runtime: go
     plan: free
     region: oregon
     branch: main
+    rootDir: apps/api
     autoDeployTrigger: off
     healthCheckPath: /health
-    buildCommand: npm ci && npm run build -w @cursor-security/api
-    startCommand: npm run db:migrate -w @cursor-security/web && npm run start -w @cursor-security/api
+    buildCommand: go build -o bin/server ./cmd/server
+    startCommand: ./bin/server
     envVars:
       - key: DATABASE_URL
         fromDatabase:

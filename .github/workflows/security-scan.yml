@@ -5,45 +5,65 @@ on:
   push:
     branches: [main, master]
   workflow_dispatch:
+    inputs:
+      fail_on:
+        description: Fail the job at or above this severity
+        type: choice
+        options: [critical, high, medium]
+        default: critical
+
+concurrency:
+  group: security-scan-${{ github.ref }}
+  cancel-in-progress: true
 
 permissions:
   contents: read
   security-events: write
   pull-requests: write
+  actions: read
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
   scan:
+    name: Repository scan
     runs-on: ubuntu-latest
+    timeout-minutes: 12
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
+      - uses: ./.github/actions/setup-workspace
 
-      - uses: actions/setup-node@v4
+      - name: Run MCP scan (SARIF)
+        id: scan
+        continue-on-error: true
+        uses: ./.github/actions/security-scan
         with:
-          node-version: "20"
-          cache: npm
-
-      - name: Install
-        run: npm ci
-
-      - name: Build MCP
-        run: npm run build -w @cursor-security/mcp
-
-      - name: Run repository scan (SARIF)
-        run: |
-          node packages/cursor-security-mcp/dist/cli.js \
-            --format sarif \
-            --out security-results.sarif \
-            --fail-on critical \
-            .
+          fail-on: ${{ github.event.inputs.fail_on || 'critical' }}
+          format: sarif
+          output: security-results.sarif
 
       - name: Upload SARIF
         if: always() && hashFiles('security-results.sarif') != ''
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@v4
         with:
           sarif_file: security-results.sarif
-        continue-on-error: true
+          wait-for-processing: true
+
+      - uses: actions/upload-artifact@v4
+        if: always() && hashFiles('security-results.sarif') != ''
+        with:
+          name: security-results-sarif
+          path: security-results.sarif
+          retention-days: 14
 
       - name: Markdown summary
         if: always()
         run: |
           node packages/cursor-security-mcp/dist/cli.js --format markdown . >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Fail on critical findings
+        if: steps.scan.outcome == 'failure'
+        run: |
+          echo "Security scan failed at the configured severity gate." >> "$GITHUB_STEP_SUMMARY"
+          exit 1

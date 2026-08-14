@@ -1,4 +1,4 @@
-import { execFileSync, execSync } from "node:child_process";
+import { execFileSync } from "node:child_process";
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -16,8 +16,17 @@ function resolveGo() {
   const bin = path.join(cache, "go", "bin", "go");
   if (!existsSync(bin)) {
     mkdirSync(cache, { recursive: true });
-    const url = process.env.GO_TARBALL_URL || "https://go.dev/dl/go1.23.6.linux-amd64.tar.gz";
-    execSync(`curl -fsSL ${url} | tar -C ${cache} -xz`, { stdio: "inherit" });
+    const url =
+      process.env.GO_TARBALL_URL ||
+      "https://go.dev/dl/go1.23.6.linux-amd64.tar.gz";
+    if (!/^https:\/\/go\.dev\/dl\/go[\w.-]+\.tar\.gz$/.test(url)) {
+      throw new Error(
+        "GO_TARBALL_URL must be an official https://go.dev/dl/ tarball",
+      );
+    }
+    const tarball = path.join(cache, "go.tar.gz");
+    execFileSync("curl", ["-fsSL", url, "-o", tarball], { stdio: "inherit" });
+    execFileSync("tar", ["-C", cache, "-xzf", tarball], { stdio: "inherit" });
   }
   return bin;
 }

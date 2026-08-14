@@ -25,10 +25,50 @@ describe("cursor-security scanners", () => {
     const report = await runDomainScan("secrets", { projectPath: fixture });
     const sarif = toSarif(report) as {
       version: string;
-      runs: Array<{ results: unknown[] }>;
+      runs: Array<{
+        results: Array<{
+          locations: Array<{ physicalLocation?: { artifactLocation?: { uri?: string } } }>;
+        }>;
+      }>;
     };
     assert.equal(sarif.version, "2.1.0");
     assert.ok(Array.isArray(sarif.runs[0]?.results));
+    for (const result of sarif.runs[0]?.results ?? []) {
+      assert.ok(result.locations?.length >= 1);
+      assert.ok(result.locations[0]?.physicalLocation?.artifactLocation?.uri);
+    }
+  });
+
+  it("gives repo-level findings a SARIF location", () => {
+    const sarif = toSarif({
+      projectPath: ".",
+      scannedAt: new Date().toISOString(),
+      overallScore: 80,
+      grade: "B",
+      summary: "test",
+      domains: [],
+      services: [],
+      findings: [
+        {
+          id: "backend-missing-rate-limit",
+          domain: "backend",
+          severity: "medium",
+          title: "No rate limiting library/signal detected",
+          description: "Backend code present but no common rate-limit middleware was found.",
+          recommendation: "Add rate limiting on auth and expensive endpoints.",
+        },
+      ],
+    }) as {
+      runs: Array<{
+        results: Array<{
+          locations: Array<{ physicalLocation?: { artifactLocation?: { uri?: string } } }>;
+        }>;
+      }>;
+    };
+    assert.equal(
+      sarif.runs[0]?.results[0]?.locations[0]?.physicalLocation?.artifactLocation?.uri,
+      "README.md",
+    );
   });
 
   it("supports ignore suppressions", async () => {

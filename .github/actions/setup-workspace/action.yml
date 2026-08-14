@@ -1,0 +1,17 @@
+name: Setup workspace
+description: Node 24 toolchain and npm ci for the monorepo
+inputs:
+  node-version:
+    description: Node.js version
+    required: false
+    default: "24"
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-node@v5
+      with:
+        node-version: ${{ inputs.node-version }}
+        cache: npm
+    - name: Install
+      shell: bash
+      run: npm ci

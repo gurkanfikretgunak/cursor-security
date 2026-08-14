@@ -4,68 +4,166 @@ on:
   push:
     branches: [main, master]
   pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 permissions:
   contents: read
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
-  build:
+  go:
+    name: Go API
     runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: apps/api
     steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-          cache: npm
-
-      - name: Install
-        run: npm ci
-
-      - name: Build security package
-        run: npm run build -w masterfabric-next-sec
-
-      - name: Build MCP package
-        run: npm run build -w @cursor-security/mcp
+      - uses: actions/checkout@v5
 
       - uses: actions/setup-go@v5
         with:
           go-version: "1.23"
           cache-dependency-path: apps/api/go.sum
 
-      - name: Test Go API
-        working-directory: apps/api
+      - name: Test
         run: go test ./...
 
-      - name: Build Go API
-        working-directory: apps/api
+      - name: Build
         run: go build -o /tmp/cursor-security-api ./cmd/server
+
+      - name: Vet
+        run: go vet ./...
+
+      - name: Summary
+        if: always()
+        run: |
+          {
+            echo "## Go API"
+            echo "- test + vet + build on Go 1.23"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  packages:
+    name: Packages
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ./.github/actions/setup-workspace
+
+      - name: Build security library
+        run: npm run build -w masterfabric-next-sec
+
+      - name: Build MCP
+        run: npm run build -w @cursor-security/mcp
 
       - name: MCP unit tests
         run: npm run test -w @cursor-security/mcp
 
+      - name: Typecheck packages
+        run: |
+          npm run typecheck -w masterfabric-next-sec
+          npm run typecheck -w @cursor-security/mcp
+
+      - name: Summary
+        if: always()
+        run: |
+          {
+            echo "## Packages"
+            echo "- masterfabric-next-sec build + typecheck"
+            echo "- @cursor-security/mcp build + tests + typecheck"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  web:
+    name: Web
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ./.github/actions/setup-workspace
+
+      - name: Build security library
+        run: npm run build -w masterfabric-next-sec
+
       - name: Typecheck
-        run: npm run typecheck
+        run: npm run typecheck -w @cursor-security/web
 
       - name: Lint
-        run: npm run lint
+        run: npm run lint -w @cursor-security/web
 
-      - name: Build web
+      - name: Build Next.js
         env:
           AUTH_SECRET: ci-build-secret-not-for-production
           AUTH_URL: http://localhost:3000
           DATABASE_URL: postgres://postgres:postgres@localhost:5432/cursor_security
         run: npm run build -w @cursor-security/web
 
-      - name: Dependency audit
-        run: npm audit --audit-level=high
+      - name: Summary
+        if: always()
+        run: |
+          {
+            echo "## Web"
+            echo "- typecheck + lint + next build"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  audit:
+    name: Dependency audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ./.github/actions/setup-workspace
+
+      - name: npm audit (high+)
+        id: audit
         continue-on-error: true
+        run: |
+          set +e
+          npm audit --audit-level=high --json > npm-audit.json
+          code=$?
+          npm audit --audit-level=high | tee -a "$GITHUB_STEP_SUMMARY"
+          exit "$code"
+
+      - uses: actions/upload-artifact@v4
+        if: always() && hashFiles('npm-audit.json') != ''
+        with:
+          name: npm-audit
+          path: npm-audit.json
+          if-no-files-found: ignore
+          retention-days: 14
+
+  ci-ok:
+    name: CI gate
+    if: always()
+    needs: [go, packages, web, audit]
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Require green jobs
+        run: |
+          echo "go=${{ needs.go.result }}"
+          echo "packages=${{ needs.packages.result }}"
+          echo "web=${{ needs.web.result }}"
+          echo "audit=${{ needs.audit.result }}"
+          for result in "${{ needs.go.result }}" "${{ needs.packages.result }}" "${{ needs.web.result }}"; do
+            if [ "$result" != "success" ]; then
+              echo "Required job failed: $result"
+              exit 1
+            fi
+          done
 
   deploy-render:
     name: Deploy backend (Render)
-    needs: build
+    needs: ci-ok
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
       - name: Trigger Render deploy
         env:
@@ -73,6 +171,8 @@ jobs:
         run: |
           if [ -z "$RENDER_DEPLOY_HOOK" ]; then
             echo "Skipping Render deploy: RENDER_DEPLOY_HOOK is not set"
+            echo "RENDER_DEPLOY_HOOK is not configured" >> "$GITHUB_STEP_SUMMARY"
             exit 0
           fi
           curl -fsS -X POST "$RENDER_DEPLOY_HOOK"
+          echo "Render deploy hook posted" >> "$GITHUB_STEP_SUMMARY"

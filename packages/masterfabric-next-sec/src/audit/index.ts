@@ -16,6 +16,7 @@ export const AUDIT_EVENTS = [
   "admin.action",
   "data.export",
   "security.scan.ingested",
+  "security.scan.removed",
 ] as const;
 
 export type AuditEventName = (typeof AUDIT_EVENTS)[number];

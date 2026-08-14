@@ -61,6 +61,7 @@ func New(deps Dependencies) http.Handler {
 		pr.Post("/api/v1/audit", auditHandler.Write)
 		pr.Get("/api/v1/scans", scanHandler.List)
 		pr.Post("/api/v1/scans", scanHandler.Create)
+		pr.Delete("/api/v1/scans/{scanID}", scanHandler.Delete)
 	})
 
 	r.NotFound(func(w http.ResponseWriter, _ *http.Request) {

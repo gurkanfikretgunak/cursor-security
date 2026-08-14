@@ -309,6 +309,29 @@ func (s *Store) ListScans(ctx context.Context, userID string, orgIDs []string, l
 	return out, rows.Err()
 }
 
+func (s *Store) GetScan(ctx context.Context, scanID string) (Scan, error) {
+	var scan Scan
+	err := s.db.QueryRow(ctx, `
+		SELECT id::text, org_id::text, project_label, overall_score, grade, summary, finding_count, source, created_at
+		FROM security_scans
+		WHERE id = $1::uuid
+	`, scanID).Scan(
+		&scan.ID, &scan.OrgID, &scan.ProjectLabel, &scan.OverallScore, &scan.Grade, &scan.Summary, &scan.FindingCount, &scan.Source, &scan.CreatedAt,
+	)
+	return scan, err
+}
+
+func (s *Store) DeleteScan(ctx context.Context, scanID string) error {
+	tag, err := s.db.Exec(ctx, `DELETE FROM security_scans WHERE id = $1::uuid`, scanID)
+	if err != nil {
+		return err
+	}
+	if tag.RowsAffected() == 0 {
+		return pgx.ErrNoRows
+	}
+	return nil
+}
+
 func deref(v *string) string {
 	if v == nil {
 		return ""

@@ -1,5 +1,5 @@
 import { execFileSync, execSync } from "node:child_process";
-import { existsSync, mkdirSync } from "node:fs";
+import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -28,3 +28,18 @@ execFileSync(go, ["build", "-o", "bin/server", "./cmd/server"], {
   stdio: "inherit",
   env: { ...process.env, GOTOOLCHAIN: "local" },
 });
+
+mkdirSync(path.join(root, "dist"), { recursive: true });
+writeFileSync(
+  path.join(root, "dist", "server.js"),
+  `import { spawn } from "node:child_process";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+const bin = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "bin", "server");
+const child = spawn(bin, { stdio: "inherit" });
+child.on("exit", (code, signal) => {
+  if (signal) process.kill(process.pid, signal);
+  process.exit(code ?? 1);
+});
+`,
+);

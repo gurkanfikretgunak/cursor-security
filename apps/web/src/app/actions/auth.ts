@@ -5,7 +5,7 @@ import { AppError } from "masterfabric-next-sec/errors";
 import { actionHandler } from "masterfabric-next-sec/validate";
 import { signIn, signOut } from "@/auth";
 import { audit } from "@/lib/audit";
-import { assertAuthHandshake } from "@/lib/handshake";
+import { assertAuthHandshake, bindBlendedSession } from "@/lib/handshake";
 import { limiter } from "@/lib/rate-limit";
 import { clearLabState } from "@/lib/lab-store";
 
@@ -121,15 +121,48 @@ export const requestTestLogin = actionHandler(
       throw new AppError("UNAUTHORIZED", "Test login failed.");
     }
 
+    const userId = `test:${input.email.toLowerCase()}`;
     await audit.write({
       event: "auth.login",
-      actorUserId: `test:${input.email.toLowerCase()}`,
+      actorUserId: userId,
       ip: ctx.ip,
       userAgent: ctx.userAgent,
       resourceType: "session",
       resourceId: input.email.toLowerCase(),
       metadata: { email: input.email.toLowerCase(), method: "test-login" },
     });
+
+    // Blend in the same request as login so X-ray step 05 does not depend
+    // on a later client bind that can miss a rotated handshake cookie.
+    try {
+      const bound = await bindBlendedSession({
+        userId,
+        handshakeId: input.handshakeId,
+      });
+      await audit.write({
+        event: "auth.blended",
+        actorUserId: userId,
+        ip: ctx.ip,
+        userAgent: ctx.userAgent,
+        resourceType: "channel",
+        resourceId: bound.channelId,
+        metadata: {
+          deviceId: bound.deviceId,
+          channelId: bound.channelId,
+          channelPath: bound.channelPath,
+          handshakeId: bound.handshakeId,
+          store: "login-bind",
+        },
+      });
+    } catch (blendError) {
+      console.error(
+        JSON.stringify({
+          context: "test-login-blend",
+          message:
+            blendError instanceof Error ? blendError.message : "blend failed",
+        }),
+      );
+    }
 
     return {
       signedIn: true,

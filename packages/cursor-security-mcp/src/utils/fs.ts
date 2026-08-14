@@ -7,6 +7,7 @@ const IGNORE_DIRS = new Set([
   "dist",
   "build",
   ".next",
+  ".vercel",
   "coverage",
   ".turbo",
   ".cache",

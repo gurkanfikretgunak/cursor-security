@@ -1,5 +1,5 @@
 name: Cursor Security Scan
-description: Run @cursor-security/mcp CLI and optionally emit SARIF
+description: Build @cursor-security/mcp, scan the repo, emit SARIF, and annotate the job
 inputs:
   project-path:
     description: Path to scan
@@ -21,6 +21,10 @@ inputs:
     description: Include npm audit signals
     required: false
     default: "false"
+outputs:
+  output-file:
+    description: Path to the written report
+    value: ${{ inputs.output }}
 runs:
   using: composite
   steps:
@@ -30,11 +34,32 @@ runs:
     - name: Scan
       shell: bash
       run: |
+        set -euo pipefail
         EXTRA=""
         if [ "${{ inputs.include-osv }}" = "true" ]; then EXTRA="--osv"; fi
+        set +e
         node packages/cursor-security-mcp/dist/cli.js \
           --format "${{ inputs.format }}" \
           --out "${{ inputs.output }}" \
           --fail-on "${{ inputs.fail-on }}" \
           $EXTRA \
           "${{ inputs.project-path }}"
+        code=$?
+        set -e
+        if [ -f "${{ inputs.output }}" ] && [ "${{ inputs.format }}" = "sarif" ]; then
+          node --input-type=module -e '
+            import { readFileSync } from "node:fs";
+            const sarif = JSON.parse(readFileSync(process.argv[1], "utf8"));
+            for (const run of sarif.runs ?? []) {
+              for (const result of run.results ?? []) {
+                const loc = result.locations?.[0]?.physicalLocation;
+                const file = loc?.artifactLocation?.uri || "README.md";
+                const line = loc?.region?.startLine || 1;
+                const level = result.level === "error" ? "error" : result.level === "warning" ? "warning" : "notice";
+                const msg = String(result.message?.text ?? "").replace(/[\r\n]+/g, " ");
+                console.log(`::${level} file=${file},line=${line}::${msg}`);
+              }
+            }
+          ' "${{ inputs.output }}"
+        fi
+        exit "$code"

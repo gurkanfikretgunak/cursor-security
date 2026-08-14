@@ -46,16 +46,17 @@ export function toSarif(report: SecurityReport): Record<string, unknown> {
           ruleId: f.ruleId || f.id.split(":")[0] || f.id,
           level: LEVEL[f.severity],
           message: { text: `${f.title}: ${f.description}` },
-          locations: f.file
-            ? [
-                {
-                  physicalLocation: {
-                    artifactLocation: { uri: f.file.replace(/\\/g, "/") },
-                    region: f.line ? { startLine: f.line } : undefined,
-                  },
+          // GitHub Code Scanning rejects results with zero locations.
+          locations: [
+            {
+              physicalLocation: {
+                artifactLocation: {
+                  uri: (f.file || "README.md").replace(/\\/g, "/"),
                 },
-              ]
-            : [],
+                region: { startLine: f.line && f.line > 0 ? f.line : 1 },
+              },
+            },
+          ],
           properties: {
             domain: f.domain,
             gradeContribution: f.severity,

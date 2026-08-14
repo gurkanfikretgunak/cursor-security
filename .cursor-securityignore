@@ -4,6 +4,10 @@
 # Fixture intentionally contains vulnerabilities for tests
 packages/cursor-security-mcp/fixtures/**
 
+# Local / CI build output (false-positive SQL hits in bundled JS)
+.vercel/**
+**/.vercel/**
+
 # Scanner implementation + docs (pattern text, not live agent config)
 packages/cursor-security-mcp/src/**
 docs/**

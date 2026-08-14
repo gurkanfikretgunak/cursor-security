@@ -130,7 +130,7 @@ jobs:
           npm audit --audit-level=high | tee -a "$GITHUB_STEP_SUMMARY"
           exit "$code"
 
-      - uses: actions/upload-artifact@v6
+      - uses: actions/upload-artifact@v7
         if: always() && hashFiles('npm-audit.json') != ''
         with:
           name: npm-audit

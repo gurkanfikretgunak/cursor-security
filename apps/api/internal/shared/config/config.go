@@ -21,6 +21,7 @@ type ServerConfig struct {
 	IdleTimeout        time.Duration
 	FrontendOrigin     string
 	CORSAllowedOrigins []string
+	ServiceKey         string
 }
 
 type DatabaseConfig struct {
@@ -55,6 +56,7 @@ func Load() *Config {
 			IdleTimeout:        time.Duration(envOrDefaultInt("SERVER_IDLE_TIMEOUT_SECONDS", 60)) * time.Second,
 			FrontendOrigin:     os.Getenv("FRONTEND_ORIGIN"),
 			CORSAllowedOrigins: envOrDefaultSlice("CORS_ALLOWED_ORIGINS", nil),
+			ServiceKey:         os.Getenv("BACKEND_SERVICE_KEY"),
 		},
 		Database: DatabaseConfig{
 			URL:     os.Getenv("DATABASE_URL"),

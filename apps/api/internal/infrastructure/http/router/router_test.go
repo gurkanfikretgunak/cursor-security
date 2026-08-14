@@ -98,3 +98,23 @@ func TestHealthLiveReadyWithoutDB(t *testing.T) {
 		t.Fatalf("ready without db should stay 200, got %d", rec.Code)
 	}
 }
+
+func TestProductRoutesRequireUserAndDatabase(t *testing.T) {
+	handler := newTestHandler()
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/orgs", nil)
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+	if rec.Code != http.StatusUnauthorized {
+		t.Fatalf("missing user status = %d", rec.Code)
+	}
+
+	req = httptest.NewRequest(http.MethodGet, "/api/v1/orgs", nil)
+	req.Header.Set("X-User-Id", "test:lab@example.com")
+	req.Header.Set("X-User-Email", "lab@example.com")
+	rec = httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+	if rec.Code != http.StatusServiceUnavailable {
+		t.Fatalf("no db status = %d", rec.Code)
+	}
+}

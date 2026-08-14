@@ -7,6 +7,7 @@ import { db } from "@/db";
 import { auditEvents } from "@/db/schema";
 import { listUserOrgs } from "@/lib/orgs";
 import { hasRemoteDatabase } from "@/lib/db-mode";
+import { goRequest } from "@/lib/go-backend";
 import { readLabEvents } from "@/lib/lab-store";
 import { describeAuditEvent } from "@/lib/security-report";
 
@@ -14,6 +15,32 @@ export async function GET(request: Request) {
   try {
     const session = await auth();
     const user = requireUser(session);
+    const remote = await goRequest<{
+      count: number;
+      events: Array<{
+        id: string;
+        event: string;
+        createdAt: string;
+        actorUserId?: string | null;
+        orgId?: string | null;
+        resourceType?: string | null;
+        resourceId?: string | null;
+        ip?: string | null;
+        userAgent?: string | null;
+        metadata?: Record<string, unknown> | null;
+      }>;
+    }>(user, `/api/v1/audit?limit=${new URL(request.url).searchParams.get("limit") ?? "100"}`);
+    if (remote) {
+      return NextResponse.json({
+        fetchedAt: new Date().toISOString(),
+        count: remote.count,
+        events: remote.events.map((e) => ({
+          ...e,
+          label: describeAuditEvent(e.event),
+        })),
+      });
+    }
+
     if (!hasRemoteDatabase()) {
       const events = await readLabEvents();
       const limitRaw = Number(

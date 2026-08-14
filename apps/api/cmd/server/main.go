@@ -45,6 +45,7 @@ func main() {
 		DB:                 pool,
 		FrontendOrigin:     cfg.Server.FrontendOrigin,
 		CORSAllowedOrigins: cfg.Server.CORSAllowedOrigins,
+		ServiceKey:         cfg.Server.ServiceKey,
 	})
 
 	addr := fmt.Sprintf("%s:%d", cfg.Server.Host, cfg.Server.Port)

@@ -1,6 +1,6 @@
 # cursor-security-api
 
-Go backend for the Cursor Security lab. Layout follows [masterfabric-go](https://github.com/gurkanfikretgunak/masterfabric-go) (`cmd/`, `internal/shared`, Chi, pgx). Product logic (auth, orgs, audit, scans) stays in Next.js.
+Go backend for the Cursor Security lab. Layout follows [masterfabric-go](https://github.com/gurkanfikretgunak/masterfabric-go) (`cmd/`, `internal/shared`, Chi, pgx). Auth.js sessions stay on Vercel; org, member, audit, and scan persistence live here.
 
 ## Contract (1-1 with the previous Node API)
 
@@ -10,6 +10,15 @@ Go backend for the Cursor Security lab. Layout follows [masterfabric-go](https:/
 | `GET` | `/api/v1/status` | `{ "ok": true, "service": "cursor-security-api", "database": "connected" \| "disconnected" \| "error" }` |
 | `OPTIONS` | `*` | `204` + CORS |
 | `*` | other | `{ "error": "not_found" }` `404` |
+
+Product routes (Next.js sends `X-User-Id` / `X-User-Email`, optional `X-Service-Key`):
+
+| Method | Path |
+| --- | --- |
+| `GET`, `POST` | `/api/v1/orgs` |
+| `GET`, `POST` | `/api/v1/orgs/{id}/members` |
+| `GET`, `POST` | `/api/v1/audit` |
+| `GET`, `POST` | `/api/v1/scans` |
 
 Also exposes masterfabric-go health probes:
 

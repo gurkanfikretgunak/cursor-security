@@ -6,7 +6,8 @@ import { auth } from "@/auth";
 import { db } from "@/db";
 import { securityScans } from "@/db/schema";
 import { listUserOrgs } from "@/lib/orgs";
-import { hasRemoteDatabase } from "@/lib/db-mode";
+import { hasDurableStore, hasRemoteDatabase } from "@/lib/db-mode";
+import { goRequest } from "@/lib/go-backend";
 import { listLabScans } from "@/lib/lab-store";
 import { compactFindings } from "@/lib/sample-scan";
 import { formatRelativeTime } from "@/lib/format";
@@ -39,8 +40,20 @@ export default async function ScansPage() {
     redirect("/login");
   }
 
-  const persist = hasRemoteDatabase();
-  const orgs = persist ? await listUserOrgs(user.id) : [];
+  const persist = hasDurableStore();
+  const remote = await goRequest<{
+    scans: Array<{
+      id: string;
+      projectLabel: string;
+      overallScore: number;
+      grade: string;
+      summary: string;
+      findingCount: number;
+      source: string;
+      createdAt: string;
+    }>;
+  }>(user, "/api/v1/scans?limit=30");
+  const orgs = persist ? await listUserOrgs(user) : [];
   const orgIds = orgs.map((o) => o.id);
   const filter =
     orgIds.length > 0
@@ -50,7 +63,12 @@ export default async function ScansPage() {
         )
       : eq(securityScans.actorUserId, user.id);
 
-  const scans: ScanCard[] = persist
+  const scans: ScanCard[] = remote
+    ? remote.scans.map((scan) => ({
+        ...scan,
+        findings: [],
+      }))
+    : persist && hasRemoteDatabase()
     ? (
         await db
           .select({

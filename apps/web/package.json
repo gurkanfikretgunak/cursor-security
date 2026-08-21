@@ -16,7 +16,7 @@
     "@auth/drizzle-adapter": "^1.9.1",
     "drizzle-orm": "^0.45.2",
     "masterfabric-next-sec": "*",
-    "next": "16.3.0",
+    "next": "16.3.1",
     "next-auth": "^5.0.0-beta.29",
     "postgres": "^3.4.7",
     "react": "19.2.8",
